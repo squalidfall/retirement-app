@@ -1,0 +1,3 @@
+<!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
+
+This project is a React (Vite) implementation of a Canadian Retirement Calculator. Persist user input in localStorage, use React hooks for state, and provide interactive charts for projections and simulations. Follow best practices for modular React code and user experience.
