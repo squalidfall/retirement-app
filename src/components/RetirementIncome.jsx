@@ -23,7 +23,7 @@ export default function RetirementIncome({ inputs }) {
     for (let i = 0; i < yearsToRetirement; i++) {
       const availableForSavings = inputs.currentIncome1 + inputs.currentIncome2 - spending;
       const totalContribution = Math.max(0, availableForSavings) + inputs.annualContribution;
-      let newBalance = savingsGrowth[savingsGrowth.length - 1] * (1 + 0.05) + totalContribution;
+      let newBalance = savingsGrowth[savingsGrowth.length - 1] * (1 + (inputs.expectedReturn ?? 5) / 100) + totalContribution;
       if (availableForSavings < 0) newBalance += availableForSavings;
       savingsGrowth.push(newBalance);
       spending *= 1 + inputs.spendingIncrease / 100;

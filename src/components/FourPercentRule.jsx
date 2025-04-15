@@ -32,7 +32,7 @@ export default function FourPercentRule({ inputs }) {
     for (let i = 0; i < yearsToRetirement; i++) {
       const availableForSavings = inputs.currentIncome1 + inputs.currentIncome2 - spending;
       const totalContribution = Math.max(0, availableForSavings) + inputs.annualContribution;
-      let newBalance = savingsGrowth[savingsGrowth.length - 1] * (1 + 0.05) + totalContribution;
+      let newBalance = savingsGrowth[savingsGrowth.length - 1] * (1 + (inputs.expectedReturn ?? 5) / 100) + totalContribution;
       if (availableForSavings < 0) newBalance += availableForSavings;
       savingsGrowth.push(newBalance);
       spending *= 1 + inputs.spendingIncrease / 100;
@@ -42,15 +42,15 @@ export default function FourPercentRule({ inputs }) {
       savingsAtRetirement,
       retirementYears,
       withdrawalPercent: 4,
-      growthRate: 5
+      growthRate: inputs.expectedReturn ?? 5
     }));
     setAdjWithdrawal(4);
-    setAdjGrowth(5);
+    setAdjGrowth(inputs.expectedReturn ?? 5);
     setAdjResult(fourPercentRule({
       savingsAtRetirement,
       retirementYears,
       withdrawalPercent: 4,
-      growthRate: 5
+      growthRate: inputs.expectedReturn ?? 5
     }));
   }, [inputs]);
 
@@ -64,7 +64,7 @@ export default function FourPercentRule({ inputs }) {
     for (let i = 0; i < yearsToRetirement; i++) {
       const availableForSavings = inputs.currentIncome1 + inputs.currentIncome2 - spending;
       const totalContribution = Math.max(0, availableForSavings) + inputs.annualContribution;
-      let newBalance = savingsGrowth[savingsGrowth.length - 1] * (1 + 0.05) + totalContribution;
+      let newBalance = savingsGrowth[savingsGrowth.length - 1] * (1 + (inputs.expectedReturn ?? 5) / 100) + totalContribution;
       if (availableForSavings < 0) newBalance += availableForSavings;
       savingsGrowth.push(newBalance);
       spending *= 1 + inputs.spendingIncrease / 100;
@@ -86,7 +86,7 @@ export default function FourPercentRule({ inputs }) {
     labels: tableData.map((row) => row.year),
     datasets: [
       {
-        label: 'Portfolio Balance (4% Rule)',
+        label: `Portfolio Balance (4% Rule, ${inputs.expectedReturn ?? 5}% Return)`,
         data: balances,
         borderColor: 'rgb(255, 99, 132)',
         backgroundColor: 'rgba(255, 99, 132, 0.2)',
@@ -112,8 +112,8 @@ export default function FourPercentRule({ inputs }) {
       <h2>4% Rule Outcome</h2>
       <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 320 }}>
-          <h3>Original (4% Rule, 5% Return)</h3>
-          <Line data={data} options={{ responsive: true, plugins: { legend: { position: 'top' }, title: { display: true, text: '4% Rule Portfolio Balance' } } }} />
+          <h3>Original (4% Rule, {inputs.expectedReturn ?? 5}% Return)</h3>
+          <Line data={data} options={{ responsive: true, plugins: { legend: { position: 'top' }, title: { display: true, text: `4% Rule Portfolio Balance (${inputs.expectedReturn ?? 5}% Return)` } } }} />
           <table>
             <thead>
               <tr><th>Year</th><th>Start Balance</th><th>Withdrawal</th><th>End Balance</th></tr>

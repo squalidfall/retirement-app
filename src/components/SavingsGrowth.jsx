@@ -27,7 +27,7 @@ export default function SavingsGrowth({ inputs }) {
       annualContribution: inputs.annualContribution,
       preRetirementSpending: inputs.preRetirementSpending,
       spendingIncrease: inputs.spendingIncrease,
-      expectedReturn: 5 // Default, or make adjustable
+      expectedReturn: inputs.expectedReturn // Use user input
     });
     setSavings(projected);
   }, [inputs]);
