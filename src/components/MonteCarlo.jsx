@@ -198,7 +198,7 @@ export default function MonteCarlo({ inputs }) {
             </ul>
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 36 }}>
-            <span style={{ minWidth: 170, display: 'inline-block' }}>Current Savings ($):</span>
+            <span style={{ minWidth: 170, display: 'inline-block' }}>Starting Retirement Savings ($):</span>
             <input type="number" min={0} max={2000000} step={5000} value={adjSavings ?? ''} onChange={e => setAdjSavings(Number(e.target.value))} style={{ width: '100%', minWidth: 120, maxWidth: 260, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3' }} />
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 36 }}>

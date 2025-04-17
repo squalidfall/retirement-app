@@ -82,8 +82,9 @@ export default function FourPercentRule({ inputs }) {
 
   const { balances, tableData } = result;
   const { balances: adjBalances, tableData: adjTableData } = adjResult;
+  const ages = Array.from({ length: tableData.length }, (_, i) => Math.max(inputs.retirementAge1, inputs.retirementAge2) + i);
   const data = {
-    labels: tableData.map((row) => row.year),
+    labels: ages,
     datasets: [
       {
         label: `Portfolio Balance (4% Rule, ${inputs.expectedReturn ?? 5}% Return)`,
@@ -94,8 +95,9 @@ export default function FourPercentRule({ inputs }) {
       },
     ],
   };
+  const adjAges = Array.from({ length: adjTableData.length }, (_, i) => Math.max(inputs.retirementAge1, inputs.retirementAge2) + i);
   const adjData = {
-    labels: adjTableData.map((row) => row.year),
+    labels: adjAges,
     datasets: [
       {
         label: `Portfolio Balance (${adjWithdrawal}% Rule, ${adjGrowth}% Return)`,
@@ -116,12 +118,12 @@ export default function FourPercentRule({ inputs }) {
           <Line data={data} options={{ responsive: true, plugins: { legend: { position: 'top' }, title: { display: true, text: `4% Rule Portfolio Balance (${inputs.expectedReturn ?? 5}% Return)` } } }} />
           <table>
             <thead>
-              <tr><th>Year</th><th>Start Balance</th><th>Withdrawal</th><th>End Balance</th></tr>
+              <tr><th>Age</th><th>Start Balance</th><th>Withdrawal</th><th>End Balance</th></tr>
             </thead>
             <tbody>
               {tableData.map((row, i) => (
                 <tr key={i}>
-                  <td>{row.year}</td>
+                  <td>{ages[i]}</td>
                   <td>${row.startBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                   <td>${row.withdrawal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                   <td>${row.endBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
@@ -143,12 +145,12 @@ export default function FourPercentRule({ inputs }) {
           <Line data={adjData} options={{ responsive: true, plugins: { legend: { position: 'top' }, title: { display: true, text: `${adjWithdrawal}% Rule Portfolio Balance` } } }} />
           <table>
             <thead>
-              <tr><th>Year</th><th>Start Balance</th><th>Withdrawal</th><th>End Balance</th></tr>
+              <tr><th>Age</th><th>Start Balance</th><th>Withdrawal</th><th>End Balance</th></tr>
             </thead>
             <tbody>
               {adjTableData.map((row, i) => (
                 <tr key={i}>
-                  <td>{row.year}</td>
+                  <td>{adjAges[i]}</td>
                   <td>${row.startBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                   <td>${row.withdrawal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                   <td>${row.endBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>

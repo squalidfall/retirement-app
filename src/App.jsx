@@ -8,6 +8,10 @@ import MonteCarlo from './components/MonteCarlo';
 import FourPercentRule from './components/FourPercentRule';
 import RetirementIncome from './components/RetirementIncome';
 import Footer from './components/Footer';
+import Drawer from '@mui/material/Drawer';
+import IconButton from '@mui/material/IconButton';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 function CollapsibleSection({ title, children, defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -44,49 +48,51 @@ function App() {
 
   return (
     <div className="app-container" style={{ display: 'flex', minHeight: '100vh', background: '#181a1b' }}>
-      {/* Toggle button always visible at top left of sidebar area */}
-      <button
-        onClick={() => setSidebarOpen((open) => !open)}
-        style={{
-          position: 'fixed',
-          top: 24,
-          left: sidebarOpen ? 900 : 0,
-          zIndex: 2000,
-          background: '#181a1b',
-          color: '#f3f3f3',
-          border: '1px solid #333',
-          borderRadius: '6px',
-          width: 32,
-          height: 48,
-          cursor: 'pointer',
-          boxShadow: '2px 0 6px #0002',
-          outline: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'left 0.3s',
-        }}
-        aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-      >
-        {sidebarOpen ? '<' : '>'}
-      </button>
-      <aside
-        style={{
-          width: sidebarOpen ? 900 : 0,
-          minWidth: sidebarOpen ? 700 : 0,
-          transition: 'width 0.3s, min-width 0.3s',
-          overflow: 'hidden',
-          background: '#23272f',
-          color: '#f3f3f3',
-          padding: sidebarOpen ? 24 : 0,
-          borderRight: sidebarOpen ? '1px solid #23272f' : 'none',
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
+      <Drawer
+        variant="persistent"
+        anchor="left"
+        open={sidebarOpen}
+        PaperProps={{
+          sx: {
+            width: 380,
+            background: '#23272f',
+            color: '#f3f3f3',
+            borderRight: '1px solid #23272f',
+            boxSizing: 'border-box',
+            p: 0,
+          },
         }}
       >
-        {sidebarOpen && <Sidebar onChange={setInputs} />}
-      </aside>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: 8 }}>
+          <IconButton onClick={() => setSidebarOpen(false)} aria-label="Collapse sidebar" size="large">
+            <ChevronLeftIcon sx={{ color: '#f3f3f3' }} />
+          </IconButton>
+        </div>
+        <Sidebar onChange={setInputs} />
+      </Drawer>
+      {!sidebarOpen && (
+        <IconButton
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Expand sidebar"
+          size="large"
+          sx={{
+            position: 'fixed',
+            top: 24,
+            left: 0,
+            zIndex: 2000,
+            background: '#23272f',
+            color: '#f3f3f3',
+            border: '1px solid #333',
+            borderRadius: '6px',
+            width: 48,
+            height: 48,
+            boxShadow: '2px 0 6px #0002',
+            '&:hover': { background: '#181a1b' },
+          }}
+        >
+          <ChevronRightIcon />
+        </IconButton>
+      )}
       <main
         style={{
           flex: 1,

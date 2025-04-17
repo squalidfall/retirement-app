@@ -60,18 +60,33 @@ export default function RetirementIncome({ inputs }) {
   return (
     <section className="retirement-income">
       <h2>Retirement Income Breakdown</h2>
-      <Pie data={data} options={{ responsive: true, plugins: { legend: { position: 'right' } } }} />
-      <table>
-        <thead>
-          <tr><th>Source</th><th>Amount</th></tr>
-        </thead>
-        <tbody>
-          {income.sources.map((s, i) => (
-            <tr key={i}><td>{s.label}</td><td>${s.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td></tr>
-          ))}
-        </tbody>
-      </table>
-      <p><strong>Total Annual Income: ${income.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong></p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 32, alignItems: 'flex-start', justifyContent: 'center' }}>
+        <div style={{ minWidth: 400, minHeight: 400, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <Pie
+            data={data}
+            options={{
+              responsive: false,
+              maintainAspectRatio: false,
+              plugins: { legend: { position: 'right' } },
+            }}
+            width={700}
+            height={700}
+          />
+        </div>
+        <div style={{ minWidth: 260, flex: 1 }}>
+          <table>
+            <thead>
+              <tr><th>Source</th><th>Amount</th></tr>
+            </thead>
+            <tbody>
+              {income.sources.map((s, i) => (
+                <tr key={i}><td>{s.label}</td><td>${s.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td></tr>
+              ))}
+            </tbody>
+          </table>
+          <p><strong>Total Annual Income: ${income.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong></p>
+        </div>
+      </div>
     </section>
   );
 }

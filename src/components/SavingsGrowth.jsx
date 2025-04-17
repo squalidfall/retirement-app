@@ -34,9 +34,10 @@ export default function SavingsGrowth({ inputs }) {
 
   if (!inputs) return null;
 
-  const ages = Array.from({ length: savings.length }, (_, i) => Math.min(inputs.currentAge1, inputs.currentAge2) + i);
+  const ages1 = Array.from({ length: savings.length }, (_, i) => inputs.currentAge1 + i);
+  const ages2 = Array.from({ length: savings.length }, (_, i) => inputs.currentAge2 + i);
   const data = {
-    labels: ages,
+    labels: Array.from({ length: savings.length }, (_, i) => Math.min(inputs.currentAge1, inputs.currentAge2) + i),
     datasets: [
       {
         label: 'Projected Savings',
@@ -54,11 +55,15 @@ export default function SavingsGrowth({ inputs }) {
       <Line data={data} options={{ responsive: true, plugins: { legend: { position: 'top' }, title: { display: true, text: 'Projected Retirement Savings' } } }} />
       <table>
         <thead>
-          <tr><th>Age</th><th>Savings</th></tr>
+          <tr><th>Age (Partner 1)</th><th>Age (Partner 2)</th><th>Savings</th></tr>
         </thead>
         <tbody>
           {savings.map((s, i) => (
-            <tr key={i}><td>{ages[i]}</td><td>${s.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td></tr>
+            <tr key={i}>
+              <td>{ages1[i]}</td>
+              <td>{ages2[i]}</td>
+              <td>${s.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+            </tr>
           ))}
         </tbody>
       </table>
