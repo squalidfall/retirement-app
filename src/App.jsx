@@ -107,14 +107,14 @@ function App() {
         <CollapsibleSection title="Savings Growth">
           <SavingsGrowth inputs={inputs} />
         </CollapsibleSection>
+        <CollapsibleSection title="Retirement Income Breakdown">
+          <RetirementIncome inputs={inputs} />
+        </CollapsibleSection>
         <CollapsibleSection title="Monte Carlo Simulation">
           <MonteCarlo inputs={inputs} />
         </CollapsibleSection>
         <CollapsibleSection title="4% Rule Outcome">
           <FourPercentRule inputs={inputs} />
-        </CollapsibleSection>
-        <CollapsibleSection title="Retirement Income Breakdown">
-          <RetirementIncome inputs={inputs} />
         </CollapsibleSection>
         <Footer />
       </main>

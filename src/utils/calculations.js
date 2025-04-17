@@ -101,17 +101,16 @@ export function retirementIncomeBreakdown({
   savingsAtRetirement, cpp1, cpp2, oas1, oas2, pension1, pension2
 }) {
   // Returns income sources and total
-  const investmentIncome = savingsAtRetirement * 0.04;
+  // Remove investment income from base calculation
   return {
     sources: [
       { label: 'CPP (Partner 1)', value: cpp1 },
       { label: 'CPP (Partner 2)', value: cpp2 },
       { label: 'OAS (Partner 1)', value: oas1 },
       { label: 'OAS (Partner 2)', value: oas2 },
-      { label: 'Investment Income', value: investmentIncome },
       { label: 'Pension (Partner 1)', value: pension1 },
       { label: 'Pension (Partner 2)', value: pension2 }
     ],
-    total: cpp1 + cpp2 + oas1 + oas2 + investmentIncome + pension1 + pension2
+    total: cpp1 + cpp2 + oas1 + oas2 + pension1 + pension2
   };
 }

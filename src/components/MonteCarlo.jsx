@@ -29,15 +29,25 @@ function getHistogramData(finalBalances, binCount = 60) {
   return { bins, counts };
 }
 
+// Helper to get the latest total annual retirement income (with investments) from window for simulation and display
+function getUserTotalRetirementIncome(results) {
+  if (typeof window !== 'undefined' && window.monteCarloRetirementIncome != null) {
+    return window.monteCarloRetirementIncome;
+  }
+  return results?.totalRetirementIncome ?? 0;
+}
+
 export default function MonteCarlo({ inputs }) {
   const [results, setResults] = useState(null);
   // Comparison sliders
   const [adjSavings, setAdjSavings] = useState();
   const [adjSpending, setAdjSpending] = useState();
   const [showDescription, setShowDescription] = useState(false);
+  const [randomReturns, setRandomReturns] = useState([]);
+  // Move forceUpdate state to the top of the component
+  const [forceUpdate, setForceUpdate] = useState(0);
 
   // Generate deterministic random returns for both original and adjusted
-  const [randomReturns, setRandomReturns] = useState([]);
   useEffect(() => {
     if (!inputs) return;
     const retirementAge = Math.max(inputs.retirementAge1, inputs.retirementAge2);
@@ -70,13 +80,33 @@ export default function MonteCarlo({ inputs }) {
       spending *= 1 + inputs.spendingIncrease / 100;
     }
     const savingsAtRetirement = savingsGrowth[savingsGrowth.length - 1];
-    // Estimate total retirement income (simplified)
-    const totalRetirementIncome = (inputs.definedPension1 + inputs.definedPension2) + (savingsAtRetirement * 0.04);
+    // Always use the latest total annual retirement income (with investments) from window for both original and adjusted simulations
+    let userTotalRetirementIncome;
+    if (typeof window !== 'undefined' && window.monteCarloRetirementIncome !== undefined && window.monteCarloRetirementIncome !== null) {
+      userTotalRetirementIncome = window.monteCarloRetirementIncome;
+    } else {
+      // fallback to base calculation if not set
+      const maxCppMonthly = 1364.60;
+      const cpp1 = maxCppMonthly * (inputs.cppBenefitPercent1 / 100) * 12;
+      const cpp2 = maxCppMonthly * (inputs.cppBenefitPercent2 / 100) * 12;
+      const oas1 = 713.34 * 12;
+      const oas2 = 713.34 * 12;
+      userTotalRetirementIncome = cpp1 + cpp2 + oas1 + oas2 + inputs.definedPension1 + inputs.definedPension2;
+    }
+    // If userTotalRetirementIncome is still 0, ensure we use the fallback
+    if (!userTotalRetirementIncome || isNaN(userTotalRetirementIncome)) {
+      const maxCppMonthly = 1364.60;
+      const cpp1 = maxCppMonthly * (inputs.cppBenefitPercent1 / 100) * 12;
+      const cpp2 = maxCppMonthly * (inputs.cppBenefitPercent2 / 100) * 12;
+      const oas1 = 713.34 * 12;
+      const oas2 = 713.34 * 12;
+      userTotalRetirementIncome = cpp1 + cpp2 + oas1 + oas2 + inputs.definedPension1 + inputs.definedPension2;
+    }
     const sim = monteCarloSimulation({
       savingsAtRetirement,
       retirementYears,
       retirementSpending: inputs.retirementSpending,
-      totalRetirementIncome,
+      totalRetirementIncome: userTotalRetirementIncome,
       equityAllocation: inputs.equityAllocation,
       bondReturn: inputs.bondReturn,
       numSimulations: inputs.numSimulations,
@@ -87,9 +117,9 @@ export default function MonteCarlo({ inputs }) {
       orig: sim,
       savingsAtRetirement,
       retirementYears,
-      totalRetirementIncome
+      totalRetirementIncome: userTotalRetirementIncome
     });
-  }, [inputs, randomReturns]);
+  }, [inputs, randomReturns, forceUpdate]);
 
   useEffect(() => {
     if (!inputs || !results) return;
@@ -111,19 +141,42 @@ export default function MonteCarlo({ inputs }) {
 
   const adjusted = React.useMemo(() => {
     if (!results || adjSavings == null || adjSpending == null || adjEquity == null || adjBond == null || adjInflation == null || !randomReturns.length) return null;
+    const userTotalRetirementIncome = getUserTotalRetirementIncome(results);
     return monteCarloSimulation({
       savingsAtRetirement: adjSavings,
       retirementYears: results.retirementYears,
       retirementSpending: adjSpending,
-      totalRetirementIncome:
-        (inputs.definedPension1 + inputs.definedPension2) + (adjSavings * 0.04),
+      totalRetirementIncome: userTotalRetirementIncome,
       equityAllocation: adjEquity,
       bondReturn: adjBond,
       numSimulations: inputs.numSimulations,
       randomReturns,
       inflationRate: adjInflation
     });
-  }, [results, adjSavings, adjSpending, adjEquity, adjBond, adjInflation, inputs, randomReturns]);
+  }, [results, adjSavings, adjSpending, adjEquity, adjBond, adjInflation, inputs, randomReturns, forceUpdate]);
+
+  // Listen for changes to window.monteCarloRetirementIncome and force update when it changes
+  useEffect(() => {
+    function handleStorageChange() {
+      setForceUpdate(f => f + 1);
+    }
+    window.addEventListener('monteCarloRetirementIncomeChanged', handleStorageChange);
+    return () => {
+      window.removeEventListener('monteCarloRetirementIncomeChanged', handleStorageChange);
+    };
+  }, []);
+
+  // Listen for changes to window.monteCarloRetirementIncome and force recalculation of both original and adjusted simulations
+  useEffect(() => {
+    function handleRetirementIncomeChange() {
+      // Trigger recalculation by updating a dummy state
+      setForceUpdate(f => f + 1);
+    }
+    window.addEventListener('monteCarloRetirementIncomeChanged', handleRetirementIncomeChange);
+    return () => {
+      window.removeEventListener('monteCarloRetirementIncomeChanged', handleRetirementIncomeChange);
+    };
+  }, []);
 
   if (!inputs || !results) return null;
 
@@ -211,7 +264,7 @@ export default function MonteCarlo({ inputs }) {
               <li>Spending Increase: {inputs.spendingIncrease}%</li>
               <li>Inflation Rate: {inputs.inflationRate}%</li>
               <li>Starting Retirement Savings: ${results.savingsAtRetirement.toLocaleString(undefined, { maximumFractionDigits: 0 })}</li>
-              <li>Starting Retirement Income: ${(results.totalRetirementIncome).toLocaleString(undefined, { maximumFractionDigits: 0 })}</li>
+              <li>Starting Retirement Income: ${(getUserTotalRetirementIncome(results)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</li>
             </ul>
           </div>
           <div style={{ fontSize: 15, marginBottom: 10, color: '#b0b0b0' }}>
@@ -255,7 +308,7 @@ export default function MonteCarlo({ inputs }) {
               <li>Spending Increase: {inputs.spendingIncrease}%</li>
               <li>Inflation Rate: {inputs.inflationRate}%</li>
               <li>Starting Retirement Savings: ${results.savingsAtRetirement.toLocaleString(undefined, { maximumFractionDigits: 0 })}</li>
-              <li>Starting Retirement Income: ${(results.totalRetirementIncome).toLocaleString(undefined, { maximumFractionDigits: 0 })}</li>
+              <li>Starting Retirement Income: ${(getUserTotalRetirementIncome(results)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</li>
             </ul>
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 36 }}>
