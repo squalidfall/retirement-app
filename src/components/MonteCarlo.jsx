@@ -46,6 +46,7 @@ export default function MonteCarlo({ inputs }) {
   const [randomReturns, setRandomReturns] = useState([]);
   // Move forceUpdate state to the top of the component
   const [forceUpdate, setForceUpdate] = useState(0);
+  const [showGraphDescription, setShowGraphDescription] = useState(false);
 
   // Generate deterministic random returns for both original and adjusted
   useEffect(() => {
@@ -235,7 +236,7 @@ export default function MonteCarlo({ inputs }) {
           <strong>How this calculator works:</strong><br />
           - For each simulation, we start with your projected retirement savings.<br />
           - Each year, a random investment return (based on historical stock market data) is applied to your portfolio, weighted by your chosen equity and bond allocation.<br />
-          - Your specified retirement spending (increased annually by your chosen inflation rate) is subtracted, and any fixed retirement income (like pensions) is added.<br />
+          - Your specified retirement spending (increased annually by your chosen inflation rate) is subtracted, and your total annual retirement income (from the Retirement Income section, including any investment withdrawals you specify) is added.<br />
           - This process repeats for each year of retirement, and the simulation tracks whether your savings last until your life expectancy.<br /><br />
           <strong>Parameters used in this simulation:</strong>
           <ul style={{ margin: '8px 0 0 18px', padding: 0 }}>
@@ -244,7 +245,7 @@ export default function MonteCarlo({ inputs }) {
             <li><strong>Expected Investment Return (%):</strong> Used for pre-retirement growth projections.</li>
             <li><strong>Inflation Rate (%):</strong> Annual increase applied to retirement spending.</li>
             <li><strong>Retirement Spending ($):</strong> Your annual spending in retirement.</li>
-            <li><strong>Retirement Income ($):</strong> Annual income from pensions and investments.</li>
+            <li><strong>Retirement Income ($):</strong> Annual income from pensions, government benefits, and any investment withdrawals you specify.</li>
             <li><strong>Number of Simulations:</strong> How many scenarios are run to estimate the probability of success.</li>
             <li><strong>Life Expectancy:</strong> Number of years the simulation runs after retirement.</li>
           </ul>
@@ -266,9 +267,6 @@ export default function MonteCarlo({ inputs }) {
               <li>Starting Retirement Savings: ${results.savingsAtRetirement.toLocaleString(undefined, { maximumFractionDigits: 0 })}</li>
               <li>Starting Retirement Income: ${(getUserTotalRetirementIncome(results)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</li>
             </ul>
-          </div>
-          <div style={{ fontSize: 15, marginBottom: 10, color: '#b0b0b0' }}>
-            This distribution graph shows the range of possible final retirement portfolio balances from all Monte Carlo simulations, given your inputs. Each bar represents how many simulations ended with a final balance in that range. A wider spread indicates more uncertainty; a higher bar means more simulations ended with that outcome.
           </div>
           <p>Success Rate: <strong>{orig.successRate.toFixed(1)}%</strong></p>
           <p>Average Final Balance: ${
@@ -294,6 +292,26 @@ export default function MonteCarlo({ inputs }) {
               y: { title: { display: true, text: 'Count of Simulations' } }
             }
           }} />
+          <button
+            onClick={() => setShowGraphDescription(v => !v)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#36A2EB',
+              fontSize: 15,
+              cursor: 'pointer',
+              margin: '10px 0 8px 0',
+              textDecoration: 'underline',
+            }}
+            aria-expanded={showGraphDescription}
+          >
+            {showGraphDescription ? 'Hide' : 'What does this graph show?'}
+          </button>
+          {showGraphDescription && (
+            <div style={{ fontSize: 15, marginBottom: 10, color: '#b0b0b0', background: '#23272f', padding: 12, borderRadius: 6, border: '1px solid #333' }}>
+              This distribution graph shows the range of possible final retirement portfolio balances from all Monte Carlo simulations, given your inputs. Each bar represents how many simulations ended with a final balance in that range. A wider spread indicates more uncertainty; a higher bar means more simulations ended with that outcome.
+            </div>
+          )}
         </div>
         <div style={{ flex: 1, minWidth: 320 }}>
           <h3>Adjusted</h3>

@@ -82,7 +82,7 @@ export default function SavingsGrowth({ inputs }) {
             <li><strong>Annual Contribution:</strong> How much you add to savings each year.</li>
             <li><strong>Current Income:</strong> Your annual income before retirement.</li>
             <li><strong>Annual Spending:</strong> Your current annual spending.</li>
-            <li><strong>Spending Increase (%):</strong> How much your spending grows each year before retirement.</li>
+            <li><strong>Spending Increase (%):</strong> How much your spending grows each year before retirement (not inflation).</li>
             <li><strong>Expected Investment Return (%):</strong> The annual growth rate applied to your savings.</li>
             <li><strong>Retirement Age:</strong> The age at which the projection ends.</li>
           </ul>

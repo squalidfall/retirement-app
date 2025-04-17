@@ -120,16 +120,17 @@ export default function RetirementIncome({ inputs }) {
       </button>
       {showDescription && (
         <div style={{ background: '#23272f', color: '#e0e0e0', borderRadius: 6, padding: 16, marginBottom: 16, fontSize: 15, maxWidth: 700 }}>
-          <strong>Retirement Income Breakdown</strong> shows the sources of your annual income in retirement, including government benefits, pensions, and investment withdrawals.<br /><br />
+          <strong>Retirement Income Breakdown</strong> shows the sources of your annual income in retirement, including government benefits, pensions, and any investment withdrawals you specify below.<br /><br />
           <strong>How this works:</strong><br />
-          - We estimate your annual income from CPP, OAS, defined benefit pensions, and a 4% withdrawal from your retirement savings.<br />
+          - We estimate your annual income from CPP, OAS, defined benefit pensions, and an optional withdrawal from your retirement savings (you choose the % below).<br />
           - The pie chart visualizes the proportion of each income source.<br />
-          - The table lists the dollar amount from each source and your total annual income.<br /><br />
+          - The table lists the dollar amount from each source and your total annual income.<br />
+          - You can specify a withdrawal % from your investments to see how it affects your total income.<br /><br />
           <strong>Parameters used:</strong>
           <ul style={{ margin: '8px 0 0 18px', padding: 0 }}>
             <li><strong>CPP & OAS:</strong> Estimated government benefits based on your input.</li>
             <li><strong>Defined Benefit Pensions:</strong> Annual pension income for each partner.</li>
-            <li><strong>Investment Income:</strong> 4% withdrawal from your projected retirement savings.</li>
+            <li><strong>Investment Income:</strong> Optional withdrawal from your projected retirement savings (user-specified %).</li>
             <li><strong>Retirement Savings:</strong> Your projected savings at retirement.</li>
           </ul>
         </div>

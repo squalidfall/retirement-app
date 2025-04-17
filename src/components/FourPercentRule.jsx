@@ -134,7 +134,8 @@ export default function FourPercentRule({ inputs }) {
           <strong>How this works in this calculator:</strong><br />
           - We project your savings at retirement, then simulate annual withdrawals of 4% (or your chosen rate) of your starting balance.<br />
           - Each year, your remaining balance grows by your expected investment return.<br />
-          - The table and chart show your portfolio balance over time, and you can adjust the withdrawal rate and return to see the impact.<br /><br />
+          - The table and chart show your portfolio balance over time, and you can adjust the withdrawal rate and return to see the impact.<br />
+          - This section is independent of the Retirement Income section and does not include government benefits or pensions.<br /><br />
           <strong>Parameters used:</strong>
           <ul style={{ margin: '8px 0 0 18px', padding: 0 }}>
             <li><strong>Starting Retirement Savings:</strong> Your projected savings at retirement.</li>
