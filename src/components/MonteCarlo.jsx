@@ -14,7 +14,7 @@ import {
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 // Helper to bin final balances for histogram
-function getHistogramData(finalBalances, binCount = 30) {
+function getHistogramData(finalBalances, binCount = 60) {
   if (!finalBalances.length) return { bins: [], counts: [] };
   const min = Math.min(...finalBalances);
   const max = Math.max(...finalBalances);
@@ -34,6 +34,7 @@ export default function MonteCarlo({ inputs }) {
   // Comparison sliders
   const [adjSavings, setAdjSavings] = useState();
   const [adjSpending, setAdjSpending] = useState();
+  const [showDescription, setShowDescription] = useState(false);
 
   // Generate deterministic random returns for both original and adjusted
   const [randomReturns, setRandomReturns] = useState([]);
@@ -79,7 +80,8 @@ export default function MonteCarlo({ inputs }) {
       equityAllocation: inputs.equityAllocation,
       bondReturn: inputs.bondReturn,
       numSimulations: inputs.numSimulations,
-      randomReturns
+      randomReturns,
+      inflationRate: inputs.inflationRate // Pass inflation rate from user input
     });
     setResults({
       orig: sim,
@@ -96,20 +98,32 @@ export default function MonteCarlo({ inputs }) {
   }, [results, inputs?.retirementSpending]);
 
   // Adjusted simulation
+  const [adjEquity, setAdjEquity] = useState();
+  const [adjBond, setAdjBond] = useState();
+  const [adjInflation, setAdjInflation] = useState();
+
+  useEffect(() => {
+    if (!inputs) return;
+    setAdjEquity(inputs.equityAllocation);
+    setAdjBond(inputs.bondReturn);
+    setAdjInflation(inputs.inflationRate);
+  }, [inputs?.equityAllocation, inputs?.bondReturn, inputs?.inflationRate]);
+
   const adjusted = React.useMemo(() => {
-    if (!results || adjSavings == null || adjSpending == null || !randomReturns.length) return null;
+    if (!results || adjSavings == null || adjSpending == null || adjEquity == null || adjBond == null || adjInflation == null || !randomReturns.length) return null;
     return monteCarloSimulation({
       savingsAtRetirement: adjSavings,
       retirementYears: results.retirementYears,
       retirementSpending: adjSpending,
       totalRetirementIncome:
         (inputs.definedPension1 + inputs.definedPension2) + (adjSavings * 0.04),
-      equityAllocation: inputs.equityAllocation,
-      bondReturn: inputs.bondReturn,
+      equityAllocation: adjEquity,
+      bondReturn: adjBond,
       numSimulations: inputs.numSimulations,
-      randomReturns
+      randomReturns,
+      inflationRate: adjInflation
     });
-  }, [results, adjSavings, adjSpending, inputs, randomReturns]);
+  }, [results, adjSavings, adjSpending, adjEquity, adjBond, adjInflation, inputs, randomReturns]);
 
   if (!inputs || !results) return null;
 
@@ -118,7 +132,10 @@ export default function MonteCarlo({ inputs }) {
   const origHist = getHistogramData(orig.finalBalances);
   const adjHist = adjusted ? getHistogramData(adjusted.finalBalances) : null;
   const origData = {
-    labels: origHist.bins.map(x => `$${Math.round(x).toLocaleString()}`),
+    labels: origHist.bins.map(x => {
+      const rounded = Math.round(x / 1000) * 1000;
+      return `$${rounded.toLocaleString()}`;
+    }),
     datasets: [
       {
         label: 'Simulation Count',
@@ -128,7 +145,10 @@ export default function MonteCarlo({ inputs }) {
     ],
   };
   const adjData = adjHist && {
-    labels: adjHist.bins.map(x => `$${Math.round(x).toLocaleString()}`),
+    labels: adjHist.bins.map(x => {
+      const rounded = Math.round(x / 1000) * 1000;
+      return `$${rounded.toLocaleString()}`;
+    }),
     datasets: [
       {
         label: 'Simulation Count',
@@ -141,6 +161,42 @@ export default function MonteCarlo({ inputs }) {
   return (
     <section className="monte-carlo">
       <h2>Monte Carlo Simulation</h2>
+      <button
+        onClick={() => setShowDescription(v => !v)}
+        style={{
+          background: 'none',
+          border: 'none',
+          color: '#36A2EB',
+          fontSize: 16,
+          cursor: 'pointer',
+          marginBottom: 8,
+          textDecoration: 'underline',
+        }}
+        aria-expanded={showDescription}
+      >
+        {showDescription ? 'Hide' : 'What is a Monte Carlo simulation?'}
+      </button>
+      {showDescription && (
+        <div style={{ background: '#23272f', color: '#e0e0e0', borderRadius: 6, padding: 16, marginBottom: 16, fontSize: 15, maxWidth: 700 }}>
+          <strong>Monte Carlo Simulation</strong> is a method for estimating the probability of different outcomes by running many simulations using random variables. In retirement planning, it helps you understand the range of possible future portfolio values by simulating thousands of possible market scenarios.<br /><br />
+          <strong>How this calculator works:</strong><br />
+          - For each simulation, we start with your projected retirement savings.<br />
+          - Each year, a random investment return (based on historical stock market data) is applied to your portfolio, weighted by your chosen equity and bond allocation.<br />
+          - Your specified retirement spending (increased annually by your chosen inflation rate) is subtracted, and any fixed retirement income (like pensions) is added.<br />
+          - This process repeats for each year of retirement, and the simulation tracks whether your savings last until your life expectancy.<br /><br />
+          <strong>Parameters used in this simulation:</strong>
+          <ul style={{ margin: '8px 0 0 18px', padding: 0 }}>
+            <li><strong>Equity Allocation (%):</strong> Portion of your portfolio in stocks.</li>
+            <li><strong>Bond Return (%):</strong> Expected annual return for bonds.</li>
+            <li><strong>Expected Investment Return (%):</strong> Used for pre-retirement growth projections.</li>
+            <li><strong>Inflation Rate (%):</strong> Annual increase applied to retirement spending.</li>
+            <li><strong>Retirement Spending ($):</strong> Your annual spending in retirement.</li>
+            <li><strong>Retirement Income ($):</strong> Annual income from pensions and investments.</li>
+            <li><strong>Number of Simulations:</strong> How many scenarios are run to estimate the probability of success.</li>
+            <li><strong>Life Expectancy:</strong> Number of years the simulation runs after retirement.</li>
+          </ul>
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 320 }}>
           <h3>Original</h3>
@@ -153,9 +209,13 @@ export default function MonteCarlo({ inputs }) {
               <li>Current Savings: ${inputs.currentSavings.toLocaleString()}</li>
               <li>Retirement Spending: ${inputs.retirementSpending.toLocaleString()}</li>
               <li>Spending Increase: {inputs.spendingIncrease}%</li>
+              <li>Inflation Rate: {inputs.inflationRate}%</li>
               <li>Starting Retirement Savings: ${results.savingsAtRetirement.toLocaleString(undefined, { maximumFractionDigits: 0 })}</li>
               <li>Starting Retirement Income: ${(results.totalRetirementIncome).toLocaleString(undefined, { maximumFractionDigits: 0 })}</li>
             </ul>
+          </div>
+          <div style={{ fontSize: 15, marginBottom: 10, color: '#b0b0b0' }}>
+            This distribution graph shows the range of possible final retirement portfolio balances from all Monte Carlo simulations, given your inputs. Each bar represents how many simulations ended with a final balance in that range. A wider spread indicates more uncertainty; a higher bar means more simulations ended with that outcome.
           </div>
           <p>Success Rate: <strong>{orig.successRate.toFixed(1)}%</strong></p>
           <p>Average Final Balance: ${
@@ -193,17 +253,30 @@ export default function MonteCarlo({ inputs }) {
               <li>Current Savings: ${adjSavings?.toLocaleString()}</li>
               <li>Retirement Spending: ${adjSpending?.toLocaleString()}</li>
               <li>Spending Increase: {inputs.spendingIncrease}%</li>
+              <li>Inflation Rate: {inputs.inflationRate}%</li>
               <li>Starting Retirement Savings: ${results.savingsAtRetirement.toLocaleString(undefined, { maximumFractionDigits: 0 })}</li>
               <li>Starting Retirement Income: ${(results.totalRetirementIncome).toLocaleString(undefined, { maximumFractionDigits: 0 })}</li>
             </ul>
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 36 }}>
             <span style={{ minWidth: 170, display: 'inline-block' }}>Starting Retirement Savings ($):</span>
-            <input type="number" min={0} max={2000000} step={5000} value={adjSavings ?? ''} onChange={e => setAdjSavings(Number(e.target.value))} style={{ width: '100%', minWidth: 120, maxWidth: 260, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3' }} />
+            <input type="number" min={0} max={2000000} step={1000} value={adjSavings != null ? Math.round(adjSavings) : ''} onChange={e => setAdjSavings(Number(e.target.value))} style={{ width: '100%', minWidth: 120, maxWidth: 260, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3' }} />
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 36 }}>
             <span style={{ minWidth: 170, display: 'inline-block' }}>Retirement Spending ($):</span>
             <input type="number" min={0} max={150000} step={1000} value={adjSpending ?? ''} onChange={e => setAdjSpending(Number(e.target.value))} style={{ width: '100%', minWidth: 120, maxWidth: 260, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3' }} />
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 36 }}>
+            <span style={{ minWidth: 170, display: 'inline-block' }}>Equity Allocation (%):</span>
+            <input type="number" min={0} max={100} step={5} value={adjEquity ?? ''} onChange={e => setAdjEquity(Number(e.target.value))} style={{ width: '100%', minWidth: 120, maxWidth: 260, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3' }} />
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 36 }}>
+            <span style={{ minWidth: 170, display: 'inline-block' }}>Bond Return (%):</span>
+            <input type="number" min={0} max={10} step={0.1} value={adjBond ?? ''} onChange={e => setAdjBond(Number(e.target.value))} style={{ width: '100%', minWidth: 120, maxWidth: 260, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3' }} />
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 36 }}>
+            <span style={{ minWidth: 170, display: 'inline-block' }}>Inflation Rate (%):</span>
+            <input type="number" min={0} max={5} step={0.1} value={adjInflation ?? ''} onChange={e => setAdjInflation(Number(e.target.value))} style={{ width: '100%', minWidth: 120, maxWidth: 260, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3' }} />
           </label>
           {adjusted && <>
             <p>Success Rate: <strong>{adjusted.successRate.toFixed(1)}%</strong></p>

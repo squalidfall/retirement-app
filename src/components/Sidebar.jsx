@@ -74,7 +74,7 @@ export default function Sidebar({ onChange }) {
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 36 }}>
               <span style={{ minWidth: 170, display: 'inline-block' }}>Current Annual Income ($):</span>
-              <input type="number" min={0} value={currentIncome1} onChange={e => setCurrentIncome1(Number(e.target.value))} style={{ width: '100%', minWidth: 120, maxWidth: 260, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3' }} />
+              <input type="number" min={0} step={1000} value={currentIncome1} onChange={e => setCurrentIncome1(Number(e.target.value))} style={{ width: '100%', minWidth: 120, maxWidth: 260, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3' }} />
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 36 }}>
               <span style={{ minWidth: 170, display: 'inline-block' }}>Defined Pension (Annual):</span>
@@ -99,7 +99,7 @@ export default function Sidebar({ onChange }) {
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 36 }}>
               <span style={{ minWidth: 170, display: 'inline-block' }}>Current Annual Income ($):</span>
-              <input type="number" min={0} value={currentIncome2} onChange={e => setCurrentIncome2(Number(e.target.value))} style={{ width: '100%', minWidth: 120, maxWidth: 260, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3' }} />
+              <input type="number" min={0} step={1000} value={currentIncome2} onChange={e => setCurrentIncome2(Number(e.target.value))} style={{ width: '100%', minWidth: 120, maxWidth: 260, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3' }} />
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 36 }}>
               <span style={{ minWidth: 170, display: 'inline-block' }}>Defined Pension (Annual):</span>
@@ -120,22 +120,22 @@ export default function Sidebar({ onChange }) {
         </label>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
           Current Combined Retirement Savings ($):
-          <input type="number" min={0} value={currentSavings} onChange={e => setCurrentSavings(Number(e.target.value))} style={{ width: 180, minWidth: 180, maxWidth: 180, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3', textAlign: 'right' }} />
+          <input type="number" min={0} step={1000} value={currentSavings} onChange={e => setCurrentSavings(Number(e.target.value))} style={{ width: 180, minWidth: 180, maxWidth: 180, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3', textAlign: 'right' }} />
         </label>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
           Annual Combined Contribution ($):
-          <input type="number" min={0} value={annualContribution} onChange={e => setAnnualContribution(Number(e.target.value))} style={{ width: 180, minWidth: 180, maxWidth: 180, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3', textAlign: 'right' }} />
+          <input type="number" min={0} step={1000} value={annualContribution} onChange={e => setAnnualContribution(Number(e.target.value))} style={{ width: 180, minWidth: 180, maxWidth: 180, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3', textAlign: 'right' }} />
         </label>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <h3>Spending Information</h3>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
           Current Annual Spending ($):
-          <input type="number" min={0} value={preRetirementSpending} onChange={e => setPreRetirementSpending(Number(e.target.value))} style={{ width: 180, minWidth: 180, maxWidth: 180, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3', textAlign: 'right' }} />
+          <input type="number" min={0} step={1000} value={preRetirementSpending} onChange={e => setPreRetirementSpending(Number(e.target.value))} style={{ width: 180, minWidth: 180, maxWidth: 180, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3', textAlign: 'right' }} />
         </label>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
           Expected Annual Retirement Spending ($):
-          <input type="number" min={0} value={retirementSpending} onChange={e => setRetirementSpending(Number(e.target.value))} style={{ width: 180, minWidth: 180, maxWidth: 180, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3', textAlign: 'right' }} />
+          <input type="number" min={0} step={1000} value={retirementSpending} onChange={e => setRetirementSpending(Number(e.target.value))} style={{ width: 180, minWidth: 180, maxWidth: 180, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3', textAlign: 'right' }} />
         </label>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
           Annual Spending Increase (%):

@@ -41,7 +41,7 @@ export function projectSavings({
 }
 
 export function monteCarloSimulation({
-  savingsAtRetirement, retirementYears, retirementSpending, totalRetirementIncome, equityAllocation, bondReturn, numSimulations, randomReturns
+  savingsAtRetirement, retirementYears, retirementSpending, totalRetirementIncome, equityAllocation, bondReturn, numSimulations, randomReturns, inflationRate = 0
 }) {
   // Returns {finalBalances, successRate}
   const finalBalances = [];
@@ -49,15 +49,18 @@ export function monteCarloSimulation({
   for (let sim = 0; sim < numSimulations; sim++) {
     let balance = savingsAtRetirement;
     let spending = retirementSpending;
+    let income = totalRetirementIncome;
     let success = true;
     // Use provided randomReturns if available
     const returns = randomReturns ? randomReturns[sim] : getRandomHistoricalReturns(retirementYears);
     for (let year = 0; year < retirementYears; year++) {
       const stockReturn = returns[year];
       const portfolioReturn = stockReturn * (equityAllocation / 100) + (bondReturn / 100) * (1 - equityAllocation / 100);
-      const withdrawal = Math.max(0, spending - totalRetirementIncome);
+      const withdrawal = Math.max(0, spending - income);
       balance = balance * (1 + portfolioReturn) - withdrawal;
-      spending *= 1 + 0.02; // Assume 2% spending increase (can be parameterized)
+      // Adjust only spending for inflation
+      spending *= 1 + inflationRate / 100;
+      // income remains fixed
       if (balance <= 0) {
         success = false;
         break;
