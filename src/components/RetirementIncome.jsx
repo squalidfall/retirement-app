@@ -86,6 +86,15 @@ export default function RetirementIncome({ inputs }) {
     }
   }, [totalWithInvestments]);
 
+  // Persist withdrawPercent in localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('withdrawPercent');
+    if (stored !== null) setWithdrawPercent(Number(stored));
+  }, []);
+  useEffect(() => {
+    localStorage.setItem('withdrawPercent', withdrawPercent);
+  }, [withdrawPercent]);
+
   if (!inputs || !income) return null;
 
   const data = {

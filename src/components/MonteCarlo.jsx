@@ -15,7 +15,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 // Helper to bin final balances for histogram
 function getHistogramData(finalBalances, binCount = 60) {
-  if (!finalBalances.length) return { bins: [], counts: [] };
+  if (!Array.isArray(finalBalances) || !finalBalances.length) return { bins: [], counts: [] };
   const min = Math.min(...finalBalances);
   const max = Math.max(...finalBalances);
   const binSize = (max - min) / binCount || 1;
@@ -38,6 +38,8 @@ function getUserTotalRetirementIncome(results) {
 }
 
 export default function MonteCarlo({ inputs }) {
+  // Defensive: if inputs is missing or incomplete, don't render
+  if (!inputs || Object.values(inputs).some(v => v === undefined || v === null)) return null;
   const [results, setResults] = useState(null);
   // Comparison sliders
   const [adjSavings, setAdjSavings] = useState();
@@ -47,6 +49,7 @@ export default function MonteCarlo({ inputs }) {
   // Move forceUpdate state to the top of the component
   const [forceUpdate, setForceUpdate] = useState(0);
   const [showGraphDescription, setShowGraphDescription] = useState(false);
+  const [showReturns, setShowReturns] = useState(false);
 
   // Generate deterministic random returns for both original and adjusted
   useEffect(() => {
@@ -58,14 +61,18 @@ export default function MonteCarlo({ inputs }) {
     setRandomReturns(returnsArr);
   }, [inputs]);
 
+  // Only update adjSavings from results.savingsAtRetirement on initial load (first render), not on every results change
   useEffect(() => {
-    if (!inputs) return;
-    setAdjSavings(inputs.currentSavings);
+    if (!inputs || !results) return;
+    setAdjSavings(results.savingsAtRetirement);
     setAdjSpending(inputs.retirementSpending);
-  }, [inputs?.currentSavings, inputs?.retirementSpending]);
+    // eslint-disable-next-line
+  }, [results?.savingsAtRetirement]); // Only update when savingsAtRetirement changes
 
   useEffect(() => {
     if (!inputs || !randomReturns.length) return;
+    // Defensive: ensure inputs.numSimulations is defined and not null
+    if (inputs.numSimulations == null) return;
     const retirementAge = Math.max(inputs.retirementAge1, inputs.retirementAge2);
     const yearsToRetirement = retirementAge - Math.min(inputs.currentAge1, inputs.currentAge2);
     const retirementYears = inputs.lifeExpectancy - retirementAge;
@@ -122,12 +129,6 @@ export default function MonteCarlo({ inputs }) {
     });
   }, [inputs, randomReturns, forceUpdate]);
 
-  useEffect(() => {
-    if (!inputs || !results) return;
-    setAdjSavings(results.savingsAtRetirement);
-    setAdjSpending(inputs.retirementSpending);
-  }, [results, inputs?.retirementSpending]);
-
   // Adjusted simulation
   const [adjEquity, setAdjEquity] = useState();
   const [adjBond, setAdjBond] = useState();
@@ -140,6 +141,7 @@ export default function MonteCarlo({ inputs }) {
     setAdjInflation(inputs.inflationRate);
   }, [inputs?.equityAllocation, inputs?.bondReturn, inputs?.inflationRate]);
 
+  // Keep adjusted parameters in sync with their input boxes
   const adjusted = React.useMemo(() => {
     if (!results || adjSavings == null || adjSpending == null || adjEquity == null || adjBond == null || adjInflation == null || !randomReturns.length) return null;
     const userTotalRetirementIncome = getUserTotalRetirementIncome(results);
@@ -154,7 +156,7 @@ export default function MonteCarlo({ inputs }) {
       randomReturns,
       inflationRate: adjInflation
     });
-  }, [results, adjSavings, adjSpending, adjEquity, adjBond, adjInflation, inputs, randomReturns, forceUpdate]);
+  }, [results, adjSavings, adjSpending, adjEquity, adjBond, adjInflation, inputs.numSimulations, randomReturns, forceUpdate]);
 
   // Listen for changes to window.monteCarloRetirementIncome and force update when it changes
   useEffect(() => {
@@ -179,12 +181,17 @@ export default function MonteCarlo({ inputs }) {
     };
   }, []);
 
-  if (!inputs || !results) return null;
-
+  // Defensive: if results or orig is missing, don't render
+  if (!inputs || !results || !results.orig) return null;
   const { orig } = results;
+  // Defensive: If orig or adjusted is null, don't render
+  if (!orig || !Array.isArray(orig.finalBalances) || !orig.finalBalances.length) return null;
+
   // Histogram data for original and adjusted
   const origHist = getHistogramData(orig.finalBalances);
   const adjHist = adjusted ? getHistogramData(adjusted.finalBalances) : null;
+  // Defensive: If histogram data is empty, don't render charts
+  if (!origHist.bins.length || !origHist.counts.length) return null;
   const origData = {
     labels: origHist.bins.map(x => {
       const rounded = Math.round(x / 1000) * 1000;
@@ -198,7 +205,8 @@ export default function MonteCarlo({ inputs }) {
       },
     ],
   };
-  const adjData = adjHist && {
+  // Defensive: If adjusted is defined but has no data, don't render adjusted chart
+  const adjData = adjHist && adjHist.bins.length && adjHist.counts.length ? {
     labels: adjHist.bins.map(x => {
       const rounded = Math.round(x / 1000) * 1000;
       return `$${rounded.toLocaleString()}`;
@@ -210,7 +218,7 @@ export default function MonteCarlo({ inputs }) {
         backgroundColor: 'rgba(255, 206, 86, 0.5)',
       },
     ],
-  };
+  } : null;
 
   return (
     <section className="monte-carlo">
@@ -260,7 +268,6 @@ export default function MonteCarlo({ inputs }) {
               <li>Equity Allocation: {inputs.equityAllocation}%</li>
               <li>Bond Return: {inputs.bondReturn}%</li>
               <li>Number of Simulations: {inputs.numSimulations}</li>
-              <li>Current Savings: ${inputs.currentSavings.toLocaleString()}</li>
               <li>Retirement Spending: ${inputs.retirementSpending.toLocaleString()}</li>
               <li>Spending Increase: {inputs.spendingIncrease}%</li>
               <li>Inflation Rate: {inputs.inflationRate}%</li>
@@ -312,20 +319,82 @@ export default function MonteCarlo({ inputs }) {
               This distribution graph shows the range of possible final retirement portfolio balances from all Monte Carlo simulations, given your inputs. Each bar represents how many simulations ended with a final balance in that range. A wider spread indicates more uncertainty; a higher bar means more simulations ended with that outcome.
             </div>
           )}
+          <button
+            onClick={() => setShowReturns(v => !v)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#36A2EB',
+              fontSize: 15,
+              cursor: 'pointer',
+              margin: '10px 0 8px 0',
+              textDecoration: 'underline',
+            }}
+            aria-expanded={showReturns}
+          >
+            {showReturns ? 'Hide' : 'Show sequence of returns used'}
+          </button>
+          {showReturns && randomReturns.length > 0 && (
+            <div style={{ fontSize: 15, marginBottom: 10, color: '#b0b0b0', background: '#23272f', padding: 12, borderRadius: 6, border: '1px solid #333', maxHeight: 220, overflowY: 'auto' }}>
+              <div style={{ marginBottom: 8 }}>
+                <strong>Sequence of Rate of Return Used (First Simulation)</strong><br />
+                <span style={{ fontSize: 13, color: '#aaa' }}>
+                  This is the sequence of annual rates of return (as a percentage) randomly selected for the first Monte Carlo simulation. Each simulation uses a different sequence, reflecting the uncertainty of future market returns.
+                </span>
+              </div>
+              <div style={{ fontFamily: 'monospace', fontSize: 14, wordBreak: 'break-all' }}>
+                {randomReturns[0].map((r, i) => `${(r * 100).toFixed(2)}%`).join(', ')}
+              </div>
+            </div>
+          )}
         </div>
         <div style={{ flex: 1, minWidth: 320 }}>
           <h3>Adjusted</h3>
           <div style={{ fontSize: 14, marginBottom: 12, background: '#23272f', padding: 12, borderRadius: 6, border: '1px solid #333' }}>
             <strong>Parameters:</strong>
             <ul style={{ margin: 0, paddingLeft: 18 }}>
-              <li>Equity Allocation: {inputs.equityAllocation}%</li>
-              <li>Bond Return: {inputs.bondReturn}%</li>
+              <li style={{ color: adjEquity !== inputs.equityAllocation ? (adjEquity - inputs.equityAllocation > 0 ? 'green' : 'red') : undefined }}>
+                Equity Allocation: {adjEquity}%
+                {adjEquity !== inputs.equityAllocation && (
+                  <span style={{ color: adjEquity - inputs.equityAllocation > 0 ? 'green' : 'red', marginLeft: 6 }}>
+                    ({adjEquity - inputs.equityAllocation > 0 ? '+' : ''}{adjEquity - inputs.equityAllocation}%)
+                  </span>
+                )}
+              </li>
+              <li style={{ color: adjBond !== inputs.bondReturn ? (adjBond - inputs.bondReturn > 0 ? 'green' : 'red') : undefined }}>
+                Bond Return: {adjBond}%
+                {adjBond !== inputs.bondReturn && (
+                  <span style={{ color: adjBond - inputs.bondReturn > 0 ? 'green' : 'red', marginLeft: 6 }}>
+                    ({adjBond - inputs.bondReturn > 0 ? '+' : ''}{(adjBond - inputs.bondReturn).toFixed(2)}%)
+                  </span>
+                )}
+              </li>
               <li>Number of Simulations: {inputs.numSimulations}</li>
-              <li>Current Savings: ${adjSavings?.toLocaleString()}</li>
-              <li>Retirement Spending: ${adjSpending?.toLocaleString()}</li>
+              <li style={{ color: adjSpending !== inputs.retirementSpending ? (adjSpending - inputs.retirementSpending > 0 ? 'red' : 'green') : undefined }}>
+                Retirement Spending: ${adjSpending?.toLocaleString()}
+                {adjSpending !== inputs.retirementSpending && (
+                  <span style={{ color: adjSpending - inputs.retirementSpending > 0 ? 'red' : 'green', marginLeft: 6 }}>
+                    ({adjSpending - inputs.retirementSpending > 0 ? '+' : ''}{(adjSpending - inputs.retirementSpending).toLocaleString()})
+                  </span>
+                )}
+              </li>
               <li>Spending Increase: {inputs.spendingIncrease}%</li>
-              <li>Inflation Rate: {inputs.inflationRate}%</li>
-              <li>Starting Retirement Savings: ${results.savingsAtRetirement.toLocaleString(undefined, { maximumFractionDigits: 0 })}</li>
+              <li style={{ color: adjInflation !== inputs.inflationRate ? (adjInflation - inputs.inflationRate > 0 ? 'green' : 'red') : undefined }}>
+                Inflation Rate: {adjInflation}%
+                {adjInflation !== inputs.inflationRate && (
+                  <span style={{ color: adjInflation - inputs.inflationRate > 0 ? 'green' : 'red', marginLeft: 6 }}>
+                    ({adjInflation - inputs.inflationRate > 0 ? '+' : ''}{(adjInflation - inputs.inflationRate).toFixed(2)}%)
+                  </span>
+                )}
+              </li>
+              <li style={{ color: adjSavings !== results.savingsAtRetirement ? (adjSavings - results.savingsAtRetirement > 0 ? 'green' : 'red') : undefined }}>
+                Starting Retirement Savings: ${adjSavings != null ? Math.round(adjSavings).toLocaleString() : ''}
+                {adjSavings !== results.savingsAtRetirement && (
+                  <span style={{ color: adjSavings - results.savingsAtRetirement > 0 ? 'green' : 'red', marginLeft: 6 }}>
+                    ({adjSavings - results.savingsAtRetirement > 0 ? '+' : ''}{(adjSavings - results.savingsAtRetirement).toLocaleString()})
+                  </span>
+                )}
+              </li>
               <li>Starting Retirement Income: ${(getUserTotalRetirementIncome(results)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</li>
             </ul>
           </div>
@@ -350,19 +419,56 @@ export default function MonteCarlo({ inputs }) {
             <input type="number" min={0} max={5} step={0.1} value={adjInflation ?? ''} onChange={e => setAdjInflation(Number(e.target.value))} style={{ width: '100%', minWidth: 120, maxWidth: 260, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3' }} />
           </label>
           {adjusted && <>
-            <p>Success Rate: <strong>{adjusted.successRate.toFixed(1)}%</strong></p>
-            <p>Average Final Balance: ${
-              (adjusted.finalBalances.reduce((a, b) => a + b, 0) / adjusted.finalBalances.length).toLocaleString(undefined, { maximumFractionDigits: 0 })
-            }</p>
-            <p>Median Final Balance: ${
-              adjusted.finalBalances.slice().sort((a, b) => a - b)[Math.floor(adjusted.finalBalances.length / 2)].toLocaleString(undefined, { maximumFractionDigits: 0 })
-            }</p>
-            <p>10th Percentile: ${
-              quantile(adjusted.finalBalances, 0.1).toLocaleString(undefined, { maximumFractionDigits: 0 })
-            }</p>
-            <p>90th Percentile: ${
-              quantile(adjusted.finalBalances, 0.9).toLocaleString(undefined, { maximumFractionDigits: 0 })
-            }</p>
+            <p>
+              Success Rate: <strong style={{ color: adjusted.successRate !== orig.successRate ? (adjusted.successRate - orig.successRate > 0 ? 'green' : 'red') : undefined }}>
+                {adjusted.successRate.toFixed(1)}%
+                {adjusted.successRate !== orig.successRate && (
+                  <span style={{ color: adjusted.successRate - orig.successRate > 0 ? 'green' : 'red', marginLeft: 6 }}>
+                    ({adjusted.successRate - orig.successRate > 0 ? '+' : ''}{(adjusted.successRate - orig.successRate).toFixed(1)}%)
+                  </span>
+                )}
+              </strong>
+            </p>
+            <p>
+              Average Final Balance: <strong style={{ color: avgFinalBalance(adjusted) !== avgFinalBalance(orig) ? (avgFinalBalance(adjusted) - avgFinalBalance(orig) > 0 ? 'green' : 'red') : undefined }}>
+                ${avgFinalBalance(adjusted).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                {avgFinalBalance(adjusted) !== avgFinalBalance(orig) && (
+                  <span style={{ color: avgFinalBalance(adjusted) - avgFinalBalance(orig) > 0 ? 'green' : 'red', marginLeft: 6 }}>
+                    ({avgFinalBalance(adjusted) - avgFinalBalance(orig) > 0 ? '+' : ''}{(avgFinalBalance(adjusted) - avgFinalBalance(orig)).toLocaleString(undefined, { maximumFractionDigits: 0 })})
+                  </span>
+                )}
+              </strong>
+            </p>
+            <p>
+              Median Final Balance: <strong style={{ color: medianFinalBalance(adjusted) !== medianFinalBalance(orig) ? (medianFinalBalance(adjusted) - medianFinalBalance(orig) > 0 ? 'green' : 'red') : undefined }}>
+                ${medianFinalBalance(adjusted).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                {medianFinalBalance(adjusted) !== medianFinalBalance(orig) && (
+                  <span style={{ color: medianFinalBalance(adjusted) - medianFinalBalance(orig) > 0 ? 'green' : 'red', marginLeft: 6 }}>
+                    ({medianFinalBalance(adjusted) - medianFinalBalance(orig) > 0 ? '+' : ''}{(medianFinalBalance(adjusted) - medianFinalBalance(orig)).toLocaleString(undefined, { maximumFractionDigits: 0 })})
+                  </span>
+                )}
+              </strong>
+            </p>
+            <p>
+              10th Percentile: <strong style={{ color: quantile(adjusted.finalBalances, 0.1) !== quantile(orig.finalBalances, 0.1) ? (quantile(adjusted.finalBalances, 0.1) - quantile(orig.finalBalances, 0.1) > 0 ? 'green' : 'red') : undefined }}>
+                ${quantile(adjusted.finalBalances, 0.1).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                {quantile(adjusted.finalBalances, 0.1) !== quantile(orig.finalBalances, 0.1) && (
+                  <span style={{ color: quantile(adjusted.finalBalances, 0.1) - quantile(orig.finalBalances, 0.1) > 0 ? 'green' : 'red', marginLeft: 6 }}>
+                    ({quantile(adjusted.finalBalances, 0.1) - quantile(orig.finalBalances, 0.1) > 0 ? '+' : ''}{(quantile(adjusted.finalBalances, 0.1) - quantile(orig.finalBalances, 0.1)).toLocaleString(undefined, { maximumFractionDigits: 0 })})
+                  </span>
+                )}
+              </strong>
+            </p>
+            <p>
+              90th Percentile: <strong style={{ color: quantile(adjusted.finalBalances, 0.9) !== quantile(orig.finalBalances, 0.9) ? (quantile(adjusted.finalBalances, 0.9) - quantile(orig.finalBalances, 0.9) > 0 ? 'green' : 'red') : undefined }}>
+                ${quantile(adjusted.finalBalances, 0.9).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                {quantile(adjusted.finalBalances, 0.9) !== quantile(orig.finalBalances, 0.9) && (
+                  <span style={{ color: quantile(adjusted.finalBalances, 0.9) - quantile(orig.finalBalances, 0.9) > 0 ? 'green' : 'red', marginLeft: 6 }}>
+                    ({quantile(adjusted.finalBalances, 0.9) - quantile(orig.finalBalances, 0.9) > 0 ? '+' : ''}{(quantile(adjusted.finalBalances, 0.9) - quantile(orig.finalBalances, 0.9)).toLocaleString(undefined, { maximumFractionDigits: 0 })})
+                  </span>
+                )}
+              </strong>
+            </p>
             <Bar data={adjData} options={{
               responsive: true,
               plugins: {
@@ -383,7 +489,7 @@ export default function MonteCarlo({ inputs }) {
 
 // Helper function for percentiles
 function quantile(arr, q) {
-  if (!arr.length) return 0;
+  if (!Array.isArray(arr) || !arr.length) return 0;
   const sorted = arr.slice().sort((a, b) => a - b);
   const pos = (sorted.length - 1) * q;
   const base = Math.floor(pos);
@@ -393,4 +499,13 @@ function quantile(arr, q) {
   } else {
     return sorted[base];
   }
+}
+
+// Helper functions for results
+function avgFinalBalance(sim) {
+  return Math.round(sim.finalBalances.reduce((a, b) => a + b, 0) / sim.finalBalances.length);
+}
+function medianFinalBalance(sim) {
+  const sorted = sim.finalBalances.slice().sort((a, b) => a - b);
+  return Math.round(sorted[Math.floor(sorted.length / 2)]);
 }
