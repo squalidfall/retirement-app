@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
-import { monteCarloSimulation, getRandomHistoricalReturns } from '../utils/calculations';
+import { monteCarloSimulation, getRandomHistoricalReturns, projectSavings } from '../utils/calculations';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -71,24 +71,38 @@ export default function MonteCarlo({ inputs }) {
 
   useEffect(() => {
     if (!inputs || !randomReturns.length) return;
-    // Defensive: ensure inputs.numSimulations is defined and not null
     if (inputs.numSimulations == null) return;
+    // Project savings for each partner (match SavingsGrowth logic)
     const retirementAge = Math.max(inputs.retirementAge1, inputs.retirementAge2);
     const yearsToRetirement = retirementAge - Math.min(inputs.currentAge1, inputs.currentAge2);
     const retirementYears = inputs.lifeExpectancy - retirementAge;
-    // Project savings at retirement
-    const savingsGrowth = [inputs.currentSavings];
-    let spending = inputs.preRetirementSpending;
-    for (let i = 0; i < yearsToRetirement; i++) {
-      const availableForSavings = inputs.currentIncome1 + inputs.currentIncome2 - spending;
-      const totalContribution = Math.max(0, availableForSavings) + inputs.annualContribution;
-      let newBalance = savingsGrowth[savingsGrowth.length - 1] * (1 + (inputs.expectedReturn ?? 5) / 100) + totalContribution;
-      if (availableForSavings < 0) newBalance += availableForSavings;
-      savingsGrowth.push(newBalance);
-      spending *= 1 + inputs.spendingIncrease / 100;
-    }
-    const savingsAtRetirement = savingsGrowth[savingsGrowth.length - 1];
-    // Always use the latest total annual retirement income (with investments) from window for both original and adjusted simulations
+    const projected1 = projectSavings({
+      currentAge: inputs.currentAge1,
+      retirementAge: inputs.retirementAge1,
+      currentSavings: inputs.currentSavings1,
+      currentIncome: inputs.currentIncome1,
+      annualContribution: inputs.annualContribution / 2,
+      preRetirementSpending: inputs.preRetirementSpending / 2,
+      spendingIncrease: inputs.spendingIncrease,
+      expectedReturn: inputs.expectedReturn
+    });
+    const projected2 = projectSavings({
+      currentAge: inputs.currentAge2,
+      retirementAge: inputs.retirementAge2,
+      currentSavings: inputs.currentSavings2,
+      currentIncome: inputs.currentIncome2,
+      annualContribution: inputs.annualContribution / 2,
+      preRetirementSpending: inputs.preRetirementSpending / 2,
+      spendingIncrease: inputs.spendingIncrease,
+      expectedReturn: inputs.expectedReturn
+    });
+    const maxLen = Math.max(projected1.length, projected2.length);
+    const combined = Array.from({ length: maxLen }, (_, i) =>
+      (projected1[i] || projected1[projected1.length - 1] || 0) +
+      (projected2[i] || projected2[projected2.length - 1] || 0)
+    );
+    const savingsAtRetirement = combined[combined.length - 1] || 0;
+    // ...existing code for income and simulation...
     let userTotalRetirementIncome;
     if (typeof window !== 'undefined' && window.monteCarloRetirementIncome !== undefined && window.monteCarloRetirementIncome !== null) {
       userTotalRetirementIncome = window.monteCarloRetirementIncome;
@@ -101,7 +115,6 @@ export default function MonteCarlo({ inputs }) {
       const oas2 = 713.34 * 12;
       userTotalRetirementIncome = cpp1 + cpp2 + oas1 + oas2 + inputs.definedPension1 + inputs.definedPension2;
     }
-    // If userTotalRetirementIncome is still 0, ensure we use the fallback
     if (!userTotalRetirementIncome || isNaN(userTotalRetirementIncome)) {
       const maxCppMonthly = 1364.60;
       const cpp1 = maxCppMonthly * (inputs.cppBenefitPercent1 / 100) * 12;
@@ -119,7 +132,7 @@ export default function MonteCarlo({ inputs }) {
       bondReturn: inputs.bondReturn,
       numSimulations: inputs.numSimulations,
       randomReturns,
-      inflationRate: inputs.inflationRate // Pass inflation rate from user input
+      inflationRate: inputs.inflationRate
     });
     setResults({
       orig: sim,

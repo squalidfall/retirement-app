@@ -21,17 +21,34 @@ export default function SavingsGrowth({ inputs }) {
 
   useEffect(() => {
     if (!inputs) return;
-    const projected = projectSavings({
-      currentAge: Math.min(inputs.currentAge1, inputs.currentAge2),
-      retirementAge: Math.max(inputs.retirementAge1, inputs.retirementAge2),
-      currentSavings: inputs.currentSavings,
-      currentIncome: inputs.currentIncome1 + inputs.currentIncome2,
-      annualContribution: inputs.annualContribution,
-      preRetirementSpending: inputs.preRetirementSpending,
+    // Project savings for each partner
+    const projected1 = projectSavings({
+      currentAge: inputs.currentAge1,
+      retirementAge: inputs.retirementAge1,
+      currentSavings: inputs.currentSavings1,
+      currentIncome: inputs.currentIncome1,
+      annualContribution: inputs.annualContribution / 2,
+      preRetirementSpending: inputs.preRetirementSpending / 2,
       spendingIncrease: inputs.spendingIncrease,
-      expectedReturn: inputs.expectedReturn // Use user input
+      expectedReturn: inputs.expectedReturn
     });
-    setSavings(projected);
+    const projected2 = projectSavings({
+      currentAge: inputs.currentAge2,
+      retirementAge: inputs.retirementAge2,
+      currentSavings: inputs.currentSavings2,
+      currentIncome: inputs.currentIncome2,
+      annualContribution: inputs.annualContribution / 2,
+      preRetirementSpending: inputs.preRetirementSpending / 2,
+      spendingIncrease: inputs.spendingIncrease,
+      expectedReturn: inputs.expectedReturn
+    });
+    // Sum both partners' savings for each year (align lengths)
+    const maxLen = Math.max(projected1.length, projected2.length);
+    const combined = Array.from({ length: maxLen }, (_, i) =>
+      (projected1[i] || projected1[projected1.length - 1] || 0) +
+      (projected2[i] || projected2[projected2.length - 1] || 0)
+    );
+    setSavings(combined);
   }, [inputs]);
 
   if (!inputs) return null;

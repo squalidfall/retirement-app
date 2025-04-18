@@ -19,15 +19,16 @@ export default function Sidebar({ onChange }) {
   const [currentIncome1, setCurrentIncome1] = usePersistedState('currentIncome1', 70000);
   const [definedPension1, setDefinedPension1] = usePersistedState('definedPension1', 5000);
   const [cppBenefitPercent1, setCppBenefitPercent1] = usePersistedState('cppBenefitPercent1', 80);
+  const [currentSavings1, setCurrentSavings1] = usePersistedState('currentSavings1', 60000);
   // Partner 2
   const [currentAge2, setCurrentAge2] = usePersistedState('currentAge2', 35);
   const [retirementAge2, setRetirementAge2] = usePersistedState('retirementAge2', 65);
   const [currentIncome2, setCurrentIncome2] = usePersistedState('currentIncome2', 55000);
   const [definedPension2, setDefinedPension2] = usePersistedState('definedPension2', 3000);
   const [cppBenefitPercent2, setCppBenefitPercent2] = usePersistedState('cppBenefitPercent2', 80);
+  const [currentSavings2, setCurrentSavings2] = usePersistedState('currentSavings2', 60000);
   // Shared
   const [lifeExpectancy, setLifeExpectancy] = usePersistedState('lifeExpectancy', 90);
-  const [currentSavings, setCurrentSavings] = usePersistedState('currentSavings', 120000);
   const [annualContribution, setAnnualContribution] = usePersistedState('annualContribution', 10000);
   // Spending
   const [preRetirementSpending, setPreRetirementSpending] = usePersistedState('preRetirementSpending', 80000);
@@ -44,16 +45,16 @@ export default function Sidebar({ onChange }) {
   // Notify parent of changes
   useEffect(() => {
     onChange && onChange({
-      currentAge1, retirementAge1, currentIncome1, definedPension1, cppBenefitPercent1,
-      currentAge2, retirementAge2, currentIncome2, definedPension2, cppBenefitPercent2,
-      lifeExpectancy, currentSavings, annualContribution,
+      currentAge1, retirementAge1, currentIncome1, definedPension1, cppBenefitPercent1, currentSavings1,
+      currentAge2, retirementAge2, currentIncome2, definedPension2, cppBenefitPercent2, currentSavings2,
+      lifeExpectancy, annualContribution,
       preRetirementSpending, retirementSpending, spendingIncrease,
       equityAllocation, bondReturn, inflationRate, numSimulations,
       expectedReturn
     });
-  }, [currentAge1, retirementAge1, currentIncome1, definedPension1, cppBenefitPercent1,
-      currentAge2, retirementAge2, currentIncome2, definedPension2, cppBenefitPercent2,
-      lifeExpectancy, currentSavings, annualContribution,
+  }, [currentAge1, retirementAge1, currentIncome1, definedPension1, cppBenefitPercent1, currentSavings1,
+      currentAge2, retirementAge2, currentIncome2, definedPension2, cppBenefitPercent2, currentSavings2,
+      lifeExpectancy, annualContribution,
       preRetirementSpending, retirementSpending, spendingIncrease,
       equityAllocation, bondReturn, inflationRate, numSimulations, expectedReturn, onChange]);
 
@@ -119,8 +120,12 @@ export default function Sidebar({ onChange }) {
           <input type="number" min={Math.max(retirementAge1, retirementAge2)} max={120} value={lifeExpectancy} onChange={e => setLifeExpectancy(Number(e.target.value))} style={{ width: 180, minWidth: 180, maxWidth: 180, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3', textAlign: 'right' }} />
         </label>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
-          Current Combined Retirement Savings ($):
-          <input type="number" min={0} step={1000} value={currentSavings} onChange={e => setCurrentSavings(Number(e.target.value))} style={{ width: 180, minWidth: 180, maxWidth: 180, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3', textAlign: 'right' }} />
+          Current Retirement Savings (Partner 1):
+          <input type="number" min={0} step={1000} value={currentSavings1} onChange={e => setCurrentSavings1(Number(e.target.value))} style={{ width: 180, minWidth: 180, maxWidth: 180, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3', textAlign: 'right' }} />
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
+          Current Retirement Savings (Partner 2):
+          <input type="number" min={0} step={1000} value={currentSavings2} onChange={e => setCurrentSavings2(Number(e.target.value))} style={{ width: 180, minWidth: 180, maxWidth: 180, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3', textAlign: 'right' }} />
         </label>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
           Annual Combined Contribution ($):

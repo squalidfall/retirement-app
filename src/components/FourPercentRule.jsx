@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Line } from 'react-chartjs-2';
-import { fourPercentRule } from '../utils/calculations';
+import { fourPercentRule, projectSavings } from '../utils/calculations';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -28,18 +28,33 @@ export default function FourPercentRule({ inputs }) {
     const retirementAge = Math.max(inputs.retirementAge1, inputs.retirementAge2);
     const yearsToRetirement = retirementAge - Math.min(inputs.currentAge1, inputs.currentAge2);
     const retirementYears = inputs.lifeExpectancy - retirementAge;
-    // Project savings at retirement
-    const savingsGrowth = [inputs.currentSavings];
-    let spending = inputs.preRetirementSpending;
-    for (let i = 0; i < yearsToRetirement; i++) {
-      const availableForSavings = inputs.currentIncome1 + inputs.currentIncome2 - spending;
-      const totalContribution = Math.max(0, availableForSavings) + inputs.annualContribution;
-      let newBalance = savingsGrowth[savingsGrowth.length - 1] * (1 + (inputs.expectedReturn ?? 5) / 100) + totalContribution;
-      if (availableForSavings < 0) newBalance += availableForSavings;
-      savingsGrowth.push(newBalance);
-      spending *= 1 + inputs.spendingIncrease / 100;
-    }
-    const savingsAtRetirement = savingsGrowth[savingsGrowth.length - 1];
+    // Project savings for each partner (match SavingsGrowth logic)
+    const projected1 = projectSavings({
+      currentAge: inputs.currentAge1,
+      retirementAge: inputs.retirementAge1,
+      currentSavings: inputs.currentSavings1,
+      currentIncome: inputs.currentIncome1,
+      annualContribution: inputs.annualContribution / 2,
+      preRetirementSpending: inputs.preRetirementSpending / 2,
+      spendingIncrease: inputs.spendingIncrease,
+      expectedReturn: inputs.expectedReturn
+    });
+    const projected2 = projectSavings({
+      currentAge: inputs.currentAge2,
+      retirementAge: inputs.retirementAge2,
+      currentSavings: inputs.currentSavings2,
+      currentIncome: inputs.currentIncome2,
+      annualContribution: inputs.annualContribution / 2,
+      preRetirementSpending: inputs.preRetirementSpending / 2,
+      spendingIncrease: inputs.spendingIncrease,
+      expectedReturn: inputs.expectedReturn
+    });
+    const maxLen = Math.max(projected1.length, projected2.length);
+    const combined = Array.from({ length: maxLen }, (_, i) =>
+      (projected1[i] || projected1[projected1.length - 1] || 0) +
+      (projected2[i] || projected2[projected2.length - 1] || 0)
+    );
+    const savingsAtRetirement = combined[combined.length - 1] || 0;
     setResult(fourPercentRule({
       savingsAtRetirement,
       retirementYears,
@@ -61,17 +76,33 @@ export default function FourPercentRule({ inputs }) {
     const retirementAge = Math.max(inputs.retirementAge1, inputs.retirementAge2);
     const yearsToRetirement = retirementAge - Math.min(inputs.currentAge1, inputs.currentAge2);
     const retirementYears = inputs.lifeExpectancy - retirementAge;
-    const savingsGrowth = [inputs.currentSavings];
-    let spending = inputs.preRetirementSpending;
-    for (let i = 0; i < yearsToRetirement; i++) {
-      const availableForSavings = inputs.currentIncome1 + inputs.currentIncome2 - spending;
-      const totalContribution = Math.max(0, availableForSavings) + inputs.annualContribution;
-      let newBalance = savingsGrowth[savingsGrowth.length - 1] * (1 + (inputs.expectedReturn ?? 5) / 100) + totalContribution;
-      if (availableForSavings < 0) newBalance += availableForSavings;
-      savingsGrowth.push(newBalance);
-      spending *= 1 + inputs.spendingIncrease / 100;
-    }
-    const savingsAtRetirement = savingsGrowth[savingsGrowth.length - 1];
+    // Project savings for each partner (match SavingsGrowth logic)
+    const projected1 = projectSavings({
+      currentAge: inputs.currentAge1,
+      retirementAge: inputs.retirementAge1,
+      currentSavings: inputs.currentSavings1,
+      currentIncome: inputs.currentIncome1,
+      annualContribution: inputs.annualContribution / 2,
+      preRetirementSpending: inputs.preRetirementSpending / 2,
+      spendingIncrease: inputs.spendingIncrease,
+      expectedReturn: inputs.expectedReturn
+    });
+    const projected2 = projectSavings({
+      currentAge: inputs.currentAge2,
+      retirementAge: inputs.retirementAge2,
+      currentSavings: inputs.currentSavings2,
+      currentIncome: inputs.currentIncome2,
+      annualContribution: inputs.annualContribution / 2,
+      preRetirementSpending: inputs.preRetirementSpending / 2,
+      spendingIncrease: inputs.spendingIncrease,
+      expectedReturn: inputs.expectedReturn
+    });
+    const maxLen = Math.max(projected1.length, projected2.length);
+    const combined = Array.from({ length: maxLen }, (_, i) =>
+      (projected1[i] || projected1[projected1.length - 1] || 0) +
+      (projected2[i] || projected2[projected2.length - 1] || 0)
+    );
+    const savingsAtRetirement = combined[combined.length - 1] || 0;
     setAdjResult(fourPercentRule({
       savingsAtRetirement,
       retirementYears,
