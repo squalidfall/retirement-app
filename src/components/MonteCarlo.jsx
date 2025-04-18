@@ -158,6 +158,11 @@ export default function MonteCarlo({ inputs }) {
     });
   }, [results, adjSavings, adjSpending, adjEquity, adjBond, adjInflation, inputs.numSimulations, randomReturns, forceUpdate]);
 
+  // Ensure adjusted simulation recalculates when adjusted values change
+  useEffect(() => {
+    setForceUpdate(f => f + 1);
+  }, [adjSavings, adjSpending, adjEquity, adjBond, adjInflation]);
+
   // Listen for changes to window.monteCarloRetirementIncome and force update when it changes
   useEffect(() => {
     function handleStorageChange() {
