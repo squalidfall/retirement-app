@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { monteCarloSimulation, getRandomHistoricalReturns, projectSavings, getFinalSavingsAt65 } from '../utils/calculations';
 import {
@@ -50,6 +50,10 @@ export default function MonteCarlo({ inputs }) {
   const [forceUpdate, setForceUpdate] = useState(0);
   const [showGraphDescription, setShowGraphDescription] = useState(false);
   const [showReturns, setShowReturns] = useState(false);
+  // Track if user has manually changed adjSavings
+  const userChangedAdjSavings = useRef(false);
+  // Track previous original value for robust sync
+  const prevOrigSavings = useRef();
 
   // Get the latest projectedSavingsAtRetirement from window (set by RetirementIncome)
   const [displayedRetirementSavings, setDisplayedRetirementSavings] = useState(() => {
@@ -84,21 +88,43 @@ export default function MonteCarlo({ inputs }) {
     setRandomReturns(returnsArr);
   }, [inputs]);
 
-  // When results.savingsAtRetirement changes, update adjSavings to match displayedRetirementSavings (unless user has changed it)
+  // Robustly sync adjSavings to displayedRetirementSavings unless user has changed it
   useEffect(() => {
-    if (!inputs || !results) return;
-    setAdjSavings(results.savingsAtRetirement);
+    if (!inputs) return;
+    const orig = displayedRetirementSavings;
+    if (
+      adjSavings === undefined ||
+      (!userChangedAdjSavings.current && (adjSavings === prevOrigSavings.current || prevOrigSavings.current === undefined)) ||
+      (!userChangedAdjSavings.current && adjSavings === orig)
+    ) {
+      setAdjSavings(orig);
+      userChangedAdjSavings.current = false;
+    }
+    prevOrigSavings.current = orig;
     setAdjSpending(inputs.retirementSpending);
     // eslint-disable-next-line
-  }, [results?.savingsAtRetirement]);
+  }, [displayedRetirementSavings]);
+
+  // Handler for manual adjSavings change
+  const handleAdjSavingsChange = (val) => {
+    userChangedAdjSavings.current = true;
+    setAdjSavings(val);
+  };
+
+  // If the user resets adjSavings to match the original, allow resync on future original changes
+  useEffect(() => {
+    if (userChangedAdjSavings.current && adjSavings === displayedRetirementSavings) {
+      userChangedAdjSavings.current = false;
+    }
+  }, [adjSavings, displayedRetirementSavings]);
 
   useEffect(() => {
     if (!inputs || !randomReturns.length) return;
     if (inputs.numSimulations == null) return;
-    // Use the final total from the savings change section (end of age 65) as the starting balance for Monte Carlo
-    const savingsAtRetirement = getFinalSavingsAt65(inputs);
+    // Use displayedRetirementSavings as the starting balance for Monte Carlo
+    const savingsAtRetirement = displayedRetirementSavings;
     const retirementYears = inputs.lifeExpectancy - 65;
-    // ...existing code for income and simulation...
+    // Use only one declaration for userTotalRetirementIncome
     let userTotalRetirementIncome;
     if (typeof window !== 'undefined' && window.monteCarloRetirementIncome !== undefined && window.monteCarloRetirementIncome !== null) {
       userTotalRetirementIncome = window.monteCarloRetirementIncome;
@@ -136,7 +162,7 @@ export default function MonteCarlo({ inputs }) {
       retirementYears,
       totalRetirementIncome: userTotalRetirementIncome
     });
-  }, [inputs, randomReturns, forceUpdate]);
+  }, [inputs, randomReturns, forceUpdate, displayedRetirementSavings]);
 
   // Adjusted simulation
   const [adjEquity, setAdjEquity] = useState();
@@ -403,18 +429,18 @@ export default function MonteCarlo({ inputs }) {
               </li>
               <li style={{ color: adjSavings !== displayedRetirementSavings ? (adjSavings - displayedRetirementSavings > 0 ? 'green' : 'red') : undefined }}>
                 Starting Retirement Savings: ${adjSavings != null ? Math.round(adjSavings).toLocaleString() : ''}
-                {adjSavings !== displayedRetirementSavings && (
+                {adjSavings !== displayedRetirementSavings ? (
                   <span style={{ color: adjSavings - displayedRetirementSavings > 0 ? 'green' : 'red', marginLeft: 6 }}>
                     ({adjSavings - displayedRetirementSavings > 0 ? '+' : ''}{(adjSavings - displayedRetirementSavings).toLocaleString()})
                   </span>
-                )}
+                ) : null}
               </li>
               <li>Starting Retirement Income: ${(getUserTotalRetirementIncome(results)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</li>
             </ul>
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 36 }}>
             <span style={{ minWidth: 170, display: 'inline-block' }}>Starting Retirement Savings ($):</span>
-            <input type="number" min={0} max={2000000} step={1000} value={adjSavings != null ? Math.round(adjSavings) : ''} onChange={e => setAdjSavings(Number(e.target.value))} style={{ width: '100%', minWidth: 120, maxWidth: 260, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3' }} />
+            <input type="number" min={0} max={2000000} step={1000} value={adjSavings != null ? Math.round(adjSavings) : ''} onChange={e => handleAdjSavingsChange(Number(e.target.value))} style={{ width: '100%', minWidth: 120, maxWidth: 260, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3' }} />
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 36 }}>
             <span style={{ minWidth: 170, display: 'inline-block' }}>Retirement Spending ($):</span>
@@ -464,21 +490,37 @@ export default function MonteCarlo({ inputs }) {
               </strong>
             </p>
             <p>
-              10th Percentile: <strong style={{ color: quantile(adjusted.finalBalances, 0.1) !== quantile(orig.finalBalances, 0.1) ? (quantile(adjusted.finalBalances, 0.1) - quantile(orig.finalBalances, 0.1) > 0 ? 'green' : 'red') : undefined }}>
+              10th Percentile: <strong style={{
+                color: quantile(adjusted.finalBalances, 0.1) !== quantile(orig.finalBalances, 0.1)
+                  ? (quantile(adjusted.finalBalances, 0.1) - quantile(orig.finalBalances, 0.1) > 0 ? 'green' : 'red')
+                  : undefined
+              }}>
                 ${quantile(adjusted.finalBalances, 0.1).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 {quantile(adjusted.finalBalances, 0.1) !== quantile(orig.finalBalances, 0.1) && (
-                  <span style={{ color: quantile(adjusted.finalBalances, 0.1) - quantile(orig.finalBalances, 0.1) > 0 ? 'green' : 'red', marginLeft: 6 }}>
-                    ({quantile(adjusted.finalBalances, 0.1) - quantile(orig.finalBalances, 0.1) > 0 ? '+' : ''}{(quantile(adjusted.finalBalances, 0.1) - quantile(orig.finalBalances, 0.1)).toLocaleString(undefined, { maximumFractionDigits: 0 })})
+                  <span style={{
+                    color: quantile(adjusted.finalBalances, 0.1) - quantile(orig.finalBalances, 0.1) > 0 ? 'green' : 'red',
+                    marginLeft: 6
+                  }}>
+                    ({quantile(adjusted.finalBalances, 0.1) - quantile(orig.finalBalances, 0.1) > 0 ? '+' : ''}
+                    {(quantile(adjusted.finalBalances, 0.1) - quantile(orig.finalBalances, 0.1)).toLocaleString(undefined, { maximumFractionDigits: 0 })})
                   </span>
                 )}
               </strong>
             </p>
             <p>
-              90th Percentile: <strong style={{ color: quantile(adjusted.finalBalances, 0.9) !== quantile(orig.finalBalances, 0.9) ? (quantile(adjusted.finalBalances, 0.9) - quantile(orig.finalBalances, 0.9) > 0 ? 'green' : 'red') : undefined }}>
+              90th Percentile: <strong style={{
+                color: quantile(adjusted.finalBalances, 0.9) !== quantile(orig.finalBalances, 0.9)
+                  ? (quantile(adjusted.finalBalances, 0.9) - quantile(orig.finalBalances, 0.9) > 0 ? 'green' : 'red')
+                  : undefined
+              }}>
                 ${quantile(adjusted.finalBalances, 0.9).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 {quantile(adjusted.finalBalances, 0.9) !== quantile(orig.finalBalances, 0.9) && (
-                  <span style={{ color: quantile(adjusted.finalBalances, 0.9) - quantile(orig.finalBalances, 0.9) > 0 ? 'green' : 'red', marginLeft: 6 }}>
-                    ({quantile(adjusted.finalBalances, 0.9) - quantile(orig.finalBalances, 0.9) > 0 ? '+' : ''}{(quantile(adjusted.finalBalances, 0.9) - quantile(orig.finalBalances, 0.9)).toLocaleString(undefined, { maximumFractionDigits: 0 })})
+                  <span style={{
+                    color: quantile(adjusted.finalBalances, 0.9) - quantile(orig.finalBalances, 0.9) > 0 ? 'green' : 'red',
+                    marginLeft: 6
+                  }}>
+                    ({quantile(adjusted.finalBalances, 0.9) - quantile(orig.finalBalances, 0.9) > 0 ? '+' : ''}
+                    {(quantile(adjusted.finalBalances, 0.9) - quantile(orig.finalBalances, 0.9)).toLocaleString(undefined, { maximumFractionDigits: 0 })})
                   </span>
                 )}
               </strong>
