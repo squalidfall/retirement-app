@@ -84,13 +84,13 @@ export default function MonteCarlo({ inputs }) {
     setRandomReturns(returnsArr);
   }, [inputs]);
 
-  // When results.savingsAtRetirement changes, update adjSavings to match displayedRetirementSavings
+  // When results.savingsAtRetirement changes, update adjSavings to match displayedRetirementSavings (unless user has changed it)
   useEffect(() => {
     if (!inputs || !results) return;
-    setAdjSavings(displayedRetirementSavings);
+    setAdjSavings(results.savingsAtRetirement);
     setAdjSpending(inputs.retirementSpending);
     // eslint-disable-next-line
-  }, [results?.savingsAtRetirement, displayedRetirementSavings]);
+  }, [results?.savingsAtRetirement]);
 
   useEffect(() => {
     if (!inputs || !randomReturns.length) return;
