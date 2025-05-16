@@ -29,7 +29,6 @@ export default function Sidebar({ onChange }) {
   const [currentSavings2, setCurrentSavings2] = usePersistedState('currentSavings2', 60000);
   // Shared
   const [lifeExpectancy, setLifeExpectancy] = usePersistedState('lifeExpectancy', 90);
-  const [annualContribution, setAnnualContribution] = usePersistedState('annualContribution', 10000);
   // Spending
   const [preRetirementSpending, setPreRetirementSpending] = usePersistedState('preRetirementSpending', 80000);
   const [retirementSpending, setRetirementSpending] = usePersistedState('retirementSpending', 65000);
@@ -47,14 +46,14 @@ export default function Sidebar({ onChange }) {
     onChange && onChange({
       currentAge1, retirementAge1, currentIncome1, definedPension1, cppBenefitPercent1, currentSavings1,
       currentAge2, retirementAge2, currentIncome2, definedPension2, cppBenefitPercent2, currentSavings2,
-      lifeExpectancy, annualContribution,
+      lifeExpectancy,
       preRetirementSpending, retirementSpending, spendingIncrease,
       equityAllocation, bondReturn, inflationRate, numSimulations,
       expectedReturn
     });
   }, [currentAge1, retirementAge1, currentIncome1, definedPension1, cppBenefitPercent1, currentSavings1,
       currentAge2, retirementAge2, currentIncome2, definedPension2, cppBenefitPercent2, currentSavings2,
-      lifeExpectancy, annualContribution,
+      lifeExpectancy,
       preRetirementSpending, retirementSpending, spendingIncrease,
       equityAllocation, bondReturn, inflationRate, numSimulations, expectedReturn, onChange]);
 
@@ -126,10 +125,6 @@ export default function Sidebar({ onChange }) {
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
           Current Retirement Savings (Partner 2):
           <input type="number" min={0} step={1000} value={currentSavings2} onChange={e => setCurrentSavings2(Number(e.target.value))} style={{ width: 180, minWidth: 180, maxWidth: 180, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3', textAlign: 'right' }} />
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
-          Annual Combined Contribution ($):
-          <input type="number" min={0} step={1000} value={annualContribution} onChange={e => setAnnualContribution(Number(e.target.value))} style={{ width: 180, minWidth: 180, maxWidth: 180, fontSize: 18, padding: '6px 10px', borderRadius: 4, border: '1px solid #888', background: '#181a1b', color: '#f3f3f3', textAlign: 'right' }} />
         </label>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

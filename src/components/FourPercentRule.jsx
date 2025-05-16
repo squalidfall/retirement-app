@@ -28,13 +28,12 @@ export default function FourPercentRule({ inputs }) {
     const retirementAge = Math.max(inputs.retirementAge1, inputs.retirementAge2);
     const yearsToRetirement = retirementAge - Math.min(inputs.currentAge1, inputs.currentAge2);
     const retirementYears = inputs.lifeExpectancy - retirementAge;
-    // Project savings for each partner (match SavingsGrowth logic)
+    // Project savings at retirement for each partner
     const projected1 = projectSavings({
       currentAge: inputs.currentAge1,
       retirementAge: inputs.retirementAge1,
       currentSavings: inputs.currentSavings1,
       currentIncome: inputs.currentIncome1,
-      annualContribution: inputs.annualContribution / 2,
       preRetirementSpending: inputs.preRetirementSpending / 2,
       spendingIncrease: inputs.spendingIncrease,
       expectedReturn: inputs.expectedReturn
@@ -44,7 +43,6 @@ export default function FourPercentRule({ inputs }) {
       retirementAge: inputs.retirementAge2,
       currentSavings: inputs.currentSavings2,
       currentIncome: inputs.currentIncome2,
-      annualContribution: inputs.annualContribution / 2,
       preRetirementSpending: inputs.preRetirementSpending / 2,
       spendingIncrease: inputs.spendingIncrease,
       expectedReturn: inputs.expectedReturn
@@ -76,13 +74,12 @@ export default function FourPercentRule({ inputs }) {
     const retirementAge = Math.max(inputs.retirementAge1, inputs.retirementAge2);
     const yearsToRetirement = retirementAge - Math.min(inputs.currentAge1, inputs.currentAge2);
     const retirementYears = inputs.lifeExpectancy - retirementAge;
-    // Project savings for each partner (match SavingsGrowth logic)
+    // Project savings at retirement for each partner
     const projected1 = projectSavings({
       currentAge: inputs.currentAge1,
       retirementAge: inputs.retirementAge1,
       currentSavings: inputs.currentSavings1,
       currentIncome: inputs.currentIncome1,
-      annualContribution: inputs.annualContribution / 2,
       preRetirementSpending: inputs.preRetirementSpending / 2,
       spendingIncrease: inputs.spendingIncrease,
       expectedReturn: inputs.expectedReturn
@@ -92,7 +89,6 @@ export default function FourPercentRule({ inputs }) {
       retirementAge: inputs.retirementAge2,
       currentSavings: inputs.currentSavings2,
       currentIncome: inputs.currentIncome2,
-      annualContribution: inputs.annualContribution / 2,
       preRetirementSpending: inputs.preRetirementSpending / 2,
       spendingIncrease: inputs.spendingIncrease,
       expectedReturn: inputs.expectedReturn

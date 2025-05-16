@@ -23,7 +23,7 @@ export function getRandomHistoricalReturns(numYears) {
 }
 
 export function projectSavings({
-  currentAge, retirementAge, currentSavings, currentIncome, annualContribution, preRetirementSpending, spendingIncrease, expectedReturn
+  currentAge, retirementAge, currentSavings, currentIncome, preRetirementSpending, spendingIncrease, expectedReturn
 }) {
   // Returns array of savings by year
   const years = retirementAge - currentAge;
@@ -31,7 +31,7 @@ export function projectSavings({
   let spending = preRetirementSpending;
   for (let i = 0; i < years; i++) {
     const availableForSavings = currentIncome - spending;
-    const totalContribution = Math.max(0, availableForSavings) + annualContribution;
+    const totalContribution = Math.max(0, availableForSavings); // Only surplus income
     let newBalance = savings[savings.length - 1] * (1 + expectedReturn / 100) + totalContribution;
     if (availableForSavings < 0) newBalance += availableForSavings;
     savings.push(newBalance);
@@ -113,4 +113,32 @@ export function retirementIncomeBreakdown({
     ],
     total: cpp1 + cpp2 + oas1 + oas2 + pension1 + pension2
   };
+}
+
+export function getFinalSavingsAt65(inputs) {
+  const startAge = Math.max(inputs.retirementAge1, inputs.retirementAge2);
+  let prevSavings = inputs.currentSavings1 + inputs.currentSavings2;
+  let finalTotal = prevSavings;
+  // Pre-retirement compounding (to end of retirement age)
+  for (let i = 0; i < startAge - Math.min(inputs.currentAge1, inputs.currentAge2) + 1; i++) {
+    const combinedIncome = inputs.currentIncome1 + inputs.currentIncome2;
+    const spending = i === 0
+      ? inputs.preRetirementSpending
+      : inputs.preRetirementSpending * Math.pow(1 + inputs.spendingIncrease / 100, i);
+    const surplus = combinedIncome - spending;
+    const growth = prevSavings * (inputs.expectedReturn / 100);
+    finalTotal = prevSavings + growth + surplus;
+    prevSavings = finalTotal;
+  }
+  // Post-retirement compounding (retirement+1 to end of 65), only if startAge < 65
+  let savingsAt65 = finalTotal;
+  if (startAge < 65) {
+    let spending = inputs.retirementSpending;
+    for (let i = 0; i < 65 - (startAge + 1) + 1; i++) {
+      const growth = savingsAt65 * (inputs.expectedReturn / 100);
+      savingsAt65 = savingsAt65 + growth - spending;
+      spending *= 1 + (inputs.inflationRate / 100);
+    }
+  }
+  return savingsAt65;
 }

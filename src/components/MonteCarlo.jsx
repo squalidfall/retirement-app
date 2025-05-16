@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
-import { monteCarloSimulation, getRandomHistoricalReturns, projectSavings } from '../utils/calculations';
+import { monteCarloSimulation, getRandomHistoricalReturns, projectSavings, getFinalSavingsAt65 } from '../utils/calculations';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -51,6 +51,29 @@ export default function MonteCarlo({ inputs }) {
   const [showGraphDescription, setShowGraphDescription] = useState(false);
   const [showReturns, setShowReturns] = useState(false);
 
+  // Get the latest projectedSavingsAtRetirement from window (set by RetirementIncome)
+  const [displayedRetirementSavings, setDisplayedRetirementSavings] = useState(() => {
+    if (typeof window !== 'undefined' && window.projectedSavingsAtRetirement != null) {
+      return window.projectedSavingsAtRetirement;
+    }
+    return getFinalSavingsAt65(inputs);
+  });
+
+  // Listen for changes to projectedSavingsAtRetirement from RetirementIncome
+  useEffect(() => {
+    function handleProjectedSavingsChange() {
+      if (typeof window !== 'undefined' && window.projectedSavingsAtRetirement != null) {
+        setDisplayedRetirementSavings(window.projectedSavingsAtRetirement);
+      }
+    }
+    window.addEventListener('projectedSavingsAtRetirementChanged', handleProjectedSavingsChange);
+    // Initial sync
+    handleProjectedSavingsChange();
+    return () => {
+      window.removeEventListener('projectedSavingsAtRetirementChanged', handleProjectedSavingsChange);
+    };
+  }, []);
+
   // Generate deterministic random returns for both original and adjusted
   useEffect(() => {
     if (!inputs) return;
@@ -61,47 +84,20 @@ export default function MonteCarlo({ inputs }) {
     setRandomReturns(returnsArr);
   }, [inputs]);
 
-  // Only update adjSavings from results.savingsAtRetirement on initial load (first render), not on every results change
+  // When results.savingsAtRetirement changes, update adjSavings to match displayedRetirementSavings
   useEffect(() => {
     if (!inputs || !results) return;
-    setAdjSavings(results.savingsAtRetirement);
+    setAdjSavings(displayedRetirementSavings);
     setAdjSpending(inputs.retirementSpending);
     // eslint-disable-next-line
-  }, [results?.savingsAtRetirement]); // Only update when savingsAtRetirement changes
+  }, [results?.savingsAtRetirement, displayedRetirementSavings]);
 
   useEffect(() => {
     if (!inputs || !randomReturns.length) return;
     if (inputs.numSimulations == null) return;
-    // Project savings for each partner (match SavingsGrowth logic)
-    const retirementAge = Math.max(inputs.retirementAge1, inputs.retirementAge2);
-    const yearsToRetirement = retirementAge - Math.min(inputs.currentAge1, inputs.currentAge2);
-    const retirementYears = inputs.lifeExpectancy - retirementAge;
-    const projected1 = projectSavings({
-      currentAge: inputs.currentAge1,
-      retirementAge: inputs.retirementAge1,
-      currentSavings: inputs.currentSavings1,
-      currentIncome: inputs.currentIncome1,
-      annualContribution: inputs.annualContribution / 2,
-      preRetirementSpending: inputs.preRetirementSpending / 2,
-      spendingIncrease: inputs.spendingIncrease,
-      expectedReturn: inputs.expectedReturn
-    });
-    const projected2 = projectSavings({
-      currentAge: inputs.currentAge2,
-      retirementAge: inputs.retirementAge2,
-      currentSavings: inputs.currentSavings2,
-      currentIncome: inputs.currentIncome2,
-      annualContribution: inputs.annualContribution / 2,
-      preRetirementSpending: inputs.preRetirementSpending / 2,
-      spendingIncrease: inputs.spendingIncrease,
-      expectedReturn: inputs.expectedReturn
-    });
-    const maxLen = Math.max(projected1.length, projected2.length);
-    const combined = Array.from({ length: maxLen }, (_, i) =>
-      (projected1[i] || projected1[projected1.length - 1] || 0) +
-      (projected2[i] || projected2[projected2.length - 1] || 0)
-    );
-    const savingsAtRetirement = combined[combined.length - 1] || 0;
+    // Use the final total from the savings change section (end of age 65) as the starting balance for Monte Carlo
+    const savingsAtRetirement = getFinalSavingsAt65(inputs);
+    const retirementYears = inputs.lifeExpectancy - 65;
     // ...existing code for income and simulation...
     let userTotalRetirementIncome;
     if (typeof window !== 'undefined' && window.monteCarloRetirementIncome !== undefined && window.monteCarloRetirementIncome !== null) {
@@ -289,7 +285,7 @@ export default function MonteCarlo({ inputs }) {
               <li>Retirement Spending: ${inputs.retirementSpending.toLocaleString()}</li>
               <li>Spending Increase: {inputs.spendingIncrease}%</li>
               <li>Inflation Rate: {inputs.inflationRate}%</li>
-              <li>Starting Retirement Savings: ${results.savingsAtRetirement.toLocaleString(undefined, { maximumFractionDigits: 0 })}</li>
+              <li>Starting Retirement Savings: ${displayedRetirementSavings != null ? Math.round(displayedRetirementSavings).toLocaleString(undefined, { maximumFractionDigits: 0 }) : ''}</li>
               <li>Starting Retirement Income: ${(getUserTotalRetirementIncome(results)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</li>
             </ul>
           </div>
@@ -405,11 +401,11 @@ export default function MonteCarlo({ inputs }) {
                   </span>
                 )}
               </li>
-              <li style={{ color: adjSavings !== results.savingsAtRetirement ? (adjSavings - results.savingsAtRetirement > 0 ? 'green' : 'red') : undefined }}>
+              <li style={{ color: adjSavings !== displayedRetirementSavings ? (adjSavings - displayedRetirementSavings > 0 ? 'green' : 'red') : undefined }}>
                 Starting Retirement Savings: ${adjSavings != null ? Math.round(adjSavings).toLocaleString() : ''}
-                {adjSavings !== results.savingsAtRetirement && (
-                  <span style={{ color: adjSavings - results.savingsAtRetirement > 0 ? 'green' : 'red', marginLeft: 6 }}>
-                    ({adjSavings - results.savingsAtRetirement > 0 ? '+' : ''}{(adjSavings - results.savingsAtRetirement).toLocaleString()})
+                {adjSavings !== displayedRetirementSavings && (
+                  <span style={{ color: adjSavings - displayedRetirementSavings > 0 ? 'green' : 'red', marginLeft: 6 }}>
+                    ({adjSavings - displayedRetirementSavings > 0 ? '+' : ''}{(adjSavings - displayedRetirementSavings).toLocaleString()})
                   </span>
                 )}
               </li>

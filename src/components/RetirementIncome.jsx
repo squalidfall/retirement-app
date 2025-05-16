@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Pie } from 'react-chartjs-2';
-import { retirementIncomeBreakdown, projectSavings } from '../utils/calculations';
+import { retirementIncomeBreakdown, projectSavings, getFinalSavingsAt65 } from '../utils/calculations';
 import {
   Chart as ChartJS,
   ArcElement,
   Tooltip,
   Legend
 } from 'chart.js';
+import { Pie } from 'react-chartjs-2';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -27,34 +27,8 @@ export default function RetirementIncome({ inputs }) {
 
   useEffect(() => {
     if (!inputs) return;
-    // Project savings for each partner (match SavingsGrowth logic)
-    const projected1 = projectSavings({
-      currentAge: inputs.currentAge1,
-      retirementAge: inputs.retirementAge1,
-      currentSavings: inputs.currentSavings1,
-      currentIncome: inputs.currentIncome1,
-      annualContribution: inputs.annualContribution / 2,
-      preRetirementSpending: inputs.preRetirementSpending / 2,
-      spendingIncrease: inputs.spendingIncrease,
-      expectedReturn: inputs.expectedReturn
-    });
-    const projected2 = projectSavings({
-      currentAge: inputs.currentAge2,
-      retirementAge: inputs.retirementAge2,
-      currentSavings: inputs.currentSavings2,
-      currentIncome: inputs.currentIncome2,
-      annualContribution: inputs.annualContribution / 2,
-      preRetirementSpending: inputs.preRetirementSpending / 2,
-      spendingIncrease: inputs.spendingIncrease,
-      expectedReturn: inputs.expectedReturn
-    });
-    // Sum both partners' savings for each year (align lengths)
-    const maxLen = Math.max(projected1.length, projected2.length);
-    const combined = Array.from({ length: maxLen }, (_, i) =>
-      (projected1[i] || projected1[projected1.length - 1] || 0) +
-      (projected2[i] || projected2[projected2.length - 1] || 0)
-    );
-    const savingsAtRetirement = combined[combined.length - 1] || 0;
+    // Use the final total from the savings change section (end of age 65) as the starting balance for the breakdown
+    const savingsAtRetirement = getFinalSavingsAt65(inputs);
     // Estimate government benefits (simplified, fixed max values)
     const maxCppMonthly = 1364.60;
     const cpp1 = maxCppMonthly * (inputs.cppBenefitPercent1 / 100) * 12;
@@ -72,13 +46,14 @@ export default function RetirementIncome({ inputs }) {
 
   useEffect(() => {
     if (!inputs || !income) return;
-    // Use projected savings at retirement for investment income calculation (match SavingsGrowth logic)
+    // Use projected savings at age 65 for investment income calculation
+    const startAge = Math.max(inputs.retirementAge1, inputs.retirementAge2);
+    const age65 = 65;
     const projected1 = projectSavings({
       currentAge: inputs.currentAge1,
       retirementAge: inputs.retirementAge1,
       currentSavings: inputs.currentSavings1,
       currentIncome: inputs.currentIncome1,
-      annualContribution: inputs.annualContribution / 2,
       preRetirementSpending: inputs.preRetirementSpending / 2,
       spendingIncrease: inputs.spendingIncrease,
       expectedReturn: inputs.expectedReturn
@@ -88,17 +63,23 @@ export default function RetirementIncome({ inputs }) {
       retirementAge: inputs.retirementAge2,
       currentSavings: inputs.currentSavings2,
       currentIncome: inputs.currentIncome2,
-      annualContribution: inputs.annualContribution / 2,
       preRetirementSpending: inputs.preRetirementSpending / 2,
       spendingIncrease: inputs.spendingIncrease,
       expectedReturn: inputs.expectedReturn
     });
-    const maxLen = Math.max(projected1.length, projected2.length);
-    const combined = Array.from({ length: maxLen }, (_, i) =>
-      (projected1[i] || projected1[projected1.length - 1] || 0) +
-      (projected2[i] || projected2[projected2.length - 1] || 0)
-    );
-    const savingsAtRetirement = combined[combined.length - 1] || 0;
+    const years1 = startAge - inputs.currentAge1;
+    const years2 = startAge - inputs.currentAge2;
+    const savings1 = years1 < projected1.length ? projected1[years1] : projected1[projected1.length - 1] || 0;
+    const savings2 = years2 < projected2.length ? projected2[years2] : projected2[projected2.length - 1] || 0;
+    let initialSavings = savings1 + savings2;
+    let savingsAt65 = initialSavings;
+    let spending = inputs.retirementSpending;
+    for (let i = 0; i < age65 - startAge; i++) {
+      const growth = savingsAt65 * (inputs.expectedReturn / 100);
+      savingsAt65 = savingsAt65 + growth - spending;
+      spending *= 1 + (inputs.inflationRate / 100);
+    }
+    const savingsAtRetirement = savingsAt65;
     const invIncome = savingsAtRetirement * (withdrawPercent / 100);
     setInvestmentIncome(invIncome);
     setTotalWithInvestments(income.total + invIncome);
@@ -114,6 +95,14 @@ export default function RetirementIncome({ inputs }) {
     }
   }, [totalWithInvestments]);
 
+  // Store projectedSavingsAtRetirement on window for MonteCarlo to read for display and simulation
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.projectedSavingsAtRetirement = projectedSavingsAtRetirement;
+      window.dispatchEvent(new Event('projectedSavingsAtRetirementChanged'));
+    }
+  }, [projectedSavingsAtRetirement]);
+
   // Persist withdrawPercent in localStorage
   useEffect(() => {
     const stored = localStorage.getItem('withdrawPercent');
@@ -124,18 +113,6 @@ export default function RetirementIncome({ inputs }) {
   }, [withdrawPercent]);
 
   if (!inputs || !income) return null;
-
-  const data = {
-    labels: income.sources.map(s => s.label),
-    datasets: [
-      {
-        data: income.sources.map(s => s.value),
-        backgroundColor: [
-          '#36A2EB', '#FF6384', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'
-        ],
-      },
-    ],
-  };
 
   return (
     <section className="retirement-income">
@@ -173,16 +150,26 @@ export default function RetirementIncome({ inputs }) {
         </div>
       )}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 32, alignItems: 'flex-start', justifyContent: 'center' }}>
-        <div style={{ minWidth: 400, minHeight: 400, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <div style={{ width: 400, height: 400, minWidth: 400, minHeight: 400, maxWidth: 400, maxHeight: 400, display: 'block', margin: '0 auto' }}>
           <Pie
-            data={data}
+            data={{
+              labels: income.sources.map(s => s.label),
+              datasets: [
+                {
+                  data: income.sources.map(s => s.value),
+                  backgroundColor: [
+                    '#36A2EB', '#FF6384', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'
+                  ],
+                },
+              ],
+            }}
             options={{
               responsive: false,
               maintainAspectRatio: false,
               plugins: { legend: { position: 'right' } },
             }}
-            width={700}
-            height={700}
+            width={400}
+            height={400}
           />
         </div>
         <div style={{ minWidth: 260, flex: 1 }}>
